@@ -1,0 +1,44 @@
+NAME := webserv
+
+CXX ?= c++
+
+SRC_DIR	:= src
+OBJ_DIR	:= obj
+INC_DIR := inc
+
+INCFLAGS := -I $(INC_DIR)
+CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -pedantic $(INCFLAGS) $(OPTFLAGS) -MMD -MP
+OPTFLAGS ?= -O2
+# LDLIBS :=
+
+SRCS := \
+				$(SRC_DIR)/main.cpp # TODO: Add each file in the src directory to this list
+
+OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+DEPS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
+
+all: $(NAME)
+
+$(NAME): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
+	@printf "\033[32m✓ %s compiled successfully\033[0m\n" "$(NAME)"
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	$(RM) -r $(OBJ_DIR)
+
+fclean: clean
+	$(RM) $(NAME)
+
+re: fclean all
+
+debug: CXXFLAGS += -g3 -fno-omit-frame-pointer -fsanitize=address,leak,undefined -DDEBUG
+debug: OPTFLAGS = -Og
+debug: re
+
+-include $(DEPS)
+
+.PHONY: all clean fclean re debug
