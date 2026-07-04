@@ -12,7 +12,11 @@ OPTFLAGS ?= -O2
 # LDLIBS :=
 
 SRCS := \
-				$(SRC_DIR)/main.cpp # TODO: Add each file in the src directory to this list
+	$(SRC_DIR)/main.cpp \
+  $(SRC_DIR)/ServerSocket.cpp \
+  $(SRC_DIR)/ClientConnection.cpp \
+  $(SRC_DIR)/PollManager.cpp \
+  $(SRC_DIR)/SocketUtils.cpp
 
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
