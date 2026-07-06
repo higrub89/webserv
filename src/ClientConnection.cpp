@@ -11,123 +11,114 @@
 /* ************************************************************************** */
 
 #include "ClientConnection.hpp"
-#include "SocketUtils.hpp"
+
 #include <sys/socket.h>
 #include <unistd.h>
+
 #include <cerrno>
 #include <cstring>
 #include <sstream>
 
+#include "SocketUtils.hpp"
+
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
 ClientConnection::ClientConnection(int fd, const ServerConfig& serverConfig)
-	: _fd(fd)
-	, _state(STATE_READING)
-	, _serverConfig(serverConfig)
-	, _writeOffset(0)
-	, _lastActivity(std::time(NULL))
-	, _keepAlive(true)
-{}
+  : fd_(fd),
+    state_(STATE_READING),
+    serverConfig_(serverConfig),
+    writeOffset_(0),
+    lastActivity_(std::time(NULL)),
+    keepAlive_(true) {}
 
-ClientConnection::~ClientConnection()
-{
-	if (_fd >= 0)
-		close(_fd);
+ClientConnection::~ClientConnection() {
+  if (fd_ >= 0)
+    close(fd_);
 }
 
 // ─── Lectura (acumulativa) ──────────────────────────────────────────────────
 
-ssize_t ClientConnection::readData()
-{
-	char chunk[READ_BUFFER_SIZE];
-	ssize_t n = recv(_fd, chunk, sizeof(chunk), 0);
+ssize_t ClientConnection::readData() {
+  char chunk[READ_BUFFER_SIZE];
+  ssize_t n = recv(fd_, chunk, sizeof(chunk), 0);
 
-	if (n > 0)
-	{
-		_readBuffer.append(chunk, n);
-		_lastActivity = std::time(NULL);
-	}
-	else if (n == 0)
-		_state = STATE_CLOSING;
-	else if (errno != EAGAIN && errno != EWOULDBLOCK)
-		_state = STATE_CLOSING;
-	return n;
+  if (n > 0) {
+    readBuffer_.append(chunk, n);
+    lastActivity_ = std::time(NULL);
+  } else if (n == 0) {
+    state_ = STATE_CLOSING;
+  } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+    state_ = STATE_CLOSING;
+  }
+  return n;
 }
 
 // ─── Escritura (parcial con offset) ─────────────────────────────────────────
 
-ssize_t ClientConnection::writeData()
-{
-	if (_writeOffset >= _writeBuffer.size())
-		return 0;
+ssize_t ClientConnection::writeData() {
+  if (writeOffset_ >= writeBuffer_.size())
+    return 0;
 
-	const char*	ptr = _writeBuffer.c_str() + _writeOffset;
-	size_t		remaining = _writeBuffer.size() - _writeOffset;
+  const char* ptr = writeBuffer_.c_str() + writeOffset_;
+  size_t remaining = writeBuffer_.size() - writeOffset_;
 
-	ssize_t n = send(_fd, ptr, remaining, MSG_NOSIGNAL);
-	if (n > 0)
-	{
-		_writeOffset += n;
-		_lastActivity = std::time(NULL);
-	}
-	else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
-		_state = STATE_CLOSING;
-	return n;
+  ssize_t n = send(fd_, ptr, remaining, MSG_NOSIGNAL);
+  if (n > 0) {
+    writeOffset_ += n;
+    lastActivity_ = std::time(NULL);
+  } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+    state_ = STATE_CLOSING;
+  }
+  return n;
 }
 
 // ─── Checks de estado ──────────────────────────────────────────────────────
 
-bool ClientConnection::isRequestComplete() const
-{
-	return _readBuffer.find("\r\n\r\n") != std::string::npos;
+bool ClientConnection::isRequestComplete() const {
+  return readBuffer_.find("\r\n\r\n") != std::string::npos;
 }
 
-bool ClientConnection::isResponseComplete() const
-{
-	return _writeOffset >= _writeBuffer.size() && !_writeBuffer.empty();
+bool ClientConnection::isResponseComplete() const {
+  return writeOffset_ >= writeBuffer_.size() && !writeBuffer_.empty();
 }
 
-bool ClientConnection::isTimedOut() const
-{
-	return (std::time(NULL) - _lastActivity) > CONNECTION_TIMEOUT_SECS;
+bool ClientConnection::isTimedOut() const {
+  return (std::time(NULL) - lastActivity_) > CONNECTION_TIMEOUT_SECS;
 }
 
 // ─── Integración con Alex ──────────────────────────────────────────────────
 
-RawRequest ClientConnection::extractRequest() const
-{
-	RawRequest req;
-	req.fd = _fd;
-	req.data = _readBuffer;
-	req.complete = isRequestComplete();
-	return req;
+RawRequest ClientConnection::extractRequest() const {
+  RawRequest req;
+  req.fd = fd_;
+  req.data = readBuffer_;
+  req.complete = isRequestComplete();
+  return req;
 }
 
 // ─── Integración con Ángel ─────────────────────────────────────────────────
 
-void ClientConnection::queueResponse(const RawResponse& response)
-{
-	_writeBuffer = response.data;
-	_writeOffset = 0;
-	_state = STATE_WRITING;
+void ClientConnection::queueResponse(const RawResponse& response) {
+  writeBuffer_ = response.data;
+  writeOffset_ = 0;
+  state_ = STATE_WRITING;
 }
 
 // ─── Getters / Setters ─────────────────────────────────────────────────────
 
-int ClientConnection::getFd() const { return _fd; }
-ConnectionState ClientConnection::getState() const { return _state; }
-void ClientConnection::setState(ConnectionState state) { _state = state; }
-const ServerConfig& ClientConnection::getServerConfig() const { return _serverConfig; }
-bool ClientConnection::isKeepAlive() const { return _keepAlive; }
-void ClientConnection::setKeepAlive(bool val) { _keepAlive = val; }
+int ClientConnection::getFd() const { return fd_; }
+ConnectionState ClientConnection::getState() const { return state_; }
+void ClientConnection::setState(ConnectionState state) { state_ = state; }
+const ServerConfig& ClientConnection::getServerConfig() const { return serverConfig_; }
+bool ClientConnection::isKeepAlive() const { return keepAlive_; }
+void ClientConnection::setKeepAlive(bool val) { keepAlive_ = val; }
 
 // ─── Reset para keep-alive ─────────────────────────────────────────────────
 
-void ClientConnection::reset()
-{
-	_readBuffer.clear();
-	_writeBuffer.clear();
-	_writeOffset = 0;
-	_state = STATE_READING;
-	_lastActivity = std::time(NULL);
+void ClientConnection::reset() {
+  readBuffer_.clear();
+  writeBuffer_.clear();
+  writeOffset_ = 0;
+  state_ = STATE_READING;
+  lastActivity_ = std::time(NULL);
 }

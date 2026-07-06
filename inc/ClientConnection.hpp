@@ -10,77 +10,78 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef CLIENTCONNECTION_HPP
-# define CLIENTCONNECTION_HPP
+#ifndef CLIENTCONNECTION_H_
+#define CLIENTCONNECTION_H_
 
-# include "Types.hpp"
-# include <ctime>
-# include <sys/types.h>
+#include <sys/types.h>
 
-# define CONNECTION_TIMEOUT_SECS	60
-# define READ_BUFFER_SIZE			8192
+#include <ctime>
 
-class ClientConnection
-{
+#include "Types.hpp"
+
+#define CONNECTION_TIMEOUT_SECS 60
+#define READ_BUFFER_SIZE 8192
+
+class ClientConnection {
 public:
-	ClientConnection(int fd, const ServerConfig& serverConfig);
-	~ClientConnection();
+  ClientConnection(int fd, const ServerConfig& serverConfig);
+  ~ClientConnection();
 
-	// ─── Ciclo de vida ──────────────────────────────────────────────────────
-	// Lee datos disponibles del FD. Retorna bytes leídos, 0=EOF, -1=EAGAIN/error
-	ssize_t		readData();
+  // ─── Ciclo de vida ──────────────────────────────────────────────────────
+  // Lee datos disponibles del FD. Retorna bytes leídos, 0=EOF, -1=EAGAIN/error
+  ssize_t readData();
 
-	// Envía datos pendientes al cliente. Gestiona envío parcial.
-	ssize_t		writeData();
+  // Envía datos pendientes al cliente. Gestiona envío parcial.
+  ssize_t writeData();
 
-	// ¿La petición HTTP está completa? (\r\n\r\n encontrado)
-	bool		isRequestComplete() const;
+  // ¿La petición HTTP está completa? (\r\n\r\n encontrado)
+  bool isRequestComplete() const;
 
-	// ¿Se envió toda la respuesta?
-	bool		isResponseComplete() const;
+  // ¿Se envió toda la respuesta?
+  bool isResponseComplete() const;
 
-	// ¿Conexión expirada por inactividad?
-	bool		isTimedOut() const;
+  // ¿Conexión expirada por inactividad?
+  bool isTimedOut() const;
 
-	// ─── Integración con Alex (Parser) ──────────────────────────────────────
-	RawRequest	extractRequest() const;
+  // ─── Integración con Alex (Parser) ──────────────────────────────────────
+  RawRequest extractRequest() const;
 
-	// ─── Integración con Ángel (Response Builder) ───────────────────────────
-	void		queueResponse(const RawResponse& response);
+  // ─── Integración con Ángel (Response Builder) ───────────────────────────
+  void queueResponse(const RawResponse& response);
 
-	// ─── Getters / Setters ──────────────────────────────────────────────────
-	int					getFd() const;
-	ConnectionState		getState() const;
-	void				setState(ConnectionState state);
-	const ServerConfig&	getServerConfig() const;
+  // ─── Getters / Setters ──────────────────────────────────────────────────
+  int getFd() const;
+  ConnectionState getState() const;
+  void setState(ConnectionState state);
+  const ServerConfig& getServerConfig() const;
 
-	bool				isKeepAlive() const;
-	void				setKeepAlive(bool val);
+  bool isKeepAlive() const;
+  void setKeepAlive(bool val);
 
-	// Reset para reutilizar la conexión (keep-alive)
-	void				reset();
+  // Reset para reutilizar la conexión (keep-alive)
+  void reset();
 
 private:
-	int					_fd;
-	ConnectionState		_state;
-	const ServerConfig&	_serverConfig;
+  int fd_;
+  ConnectionState state_;
+  const ServerConfig& serverConfig_;
 
-	// Buffer de entrada (acumulativo: recv() puede fragmentar)
-	std::string			_readBuffer;
+  // Buffer de entrada (acumulativo: recv() puede fragmentar)
+  std::string readBuffer_;
 
-	// Buffer de salida (con offset para envío parcial)
-	std::string			_writeBuffer;
-	size_t				_writeOffset;
+  // Buffer de salida (con offset para envío parcial)
+  std::string writeBuffer_;
+  size_t writeOffset_;
 
-	// Gestión de tiempo
-	std::time_t			_lastActivity;
+  // Gestión de tiempo
+  std::time_t lastActivity_;
 
-	// Keep-Alive
-	bool				_keepAlive;
+  // Keep-Alive
+  bool keepAlive_;
 
-	// Orthodox Canonical Form: prohibir copia
-	ClientConnection(const ClientConnection&);
-	ClientConnection& operator=(const ClientConnection&);
+  // Orthodox Canonical Form: prohibir copia
+  ClientConnection(const ClientConnection&);
+  ClientConnection& operator=(const ClientConnection&);
 };
 
-#endif // CLIENTCONNECTION_HPP
+#endif  // CLIENTCONNECTION_H_

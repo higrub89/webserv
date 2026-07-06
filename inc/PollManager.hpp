@@ -10,74 +10,75 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef POLLMANAGER_HPP
-# define POLLMANAGER_HPP
+#ifndef POLLMANAGER_H_
+#define POLLMANAGER_H_
 
-# include "ServerSocket.hpp"
-# include "ClientConnection.hpp"
-# include "Types.hpp"
-# include <poll.h>
-# include <map>
-# include <vector>
+#include <poll.h>
 
-# define MAX_CONNECTIONS	1024
-# define POLL_TIMEOUT_MS	5000
+#include <map>
+#include <vector>
 
-class PollManager
-{
+#include "ClientConnection.hpp"
+#include "ServerSocket.hpp"
+#include "Types.hpp"
+
+#define MAX_CONNECTIONS 1024
+#define POLL_TIMEOUT_MS 5000
+
+class PollManager {
 public:
-	PollManager();
-	~PollManager();
+  PollManager();
+  ~PollManager();
 
-	// Registrar un socket de escucha (uno por bloque server{} en config)
-	void	addServer(ServerSocket* server);
+  // Registrar un socket de escucha (uno por bloque server{} en config)
+  void addServer(ServerSocket* server);
 
-	// Bucle principal. Bloquea hasta señal de parada.
-	void	run();
+  // Bucle principal. Bloquea hasta señal de parada.
+  void run();
 
-	// Detener el loop (llamado desde signal handler)
-	void	stop();
+  // Detener el loop (llamado desde signal handler)
+  void stop();
 
 private:
-	// Sockets de escucha (propiedad de PollManager: los libera en destructor)
-	std::vector<ServerSocket*>			_servers;
+  // Sockets de escucha (propiedad de PollManager: los libera en destructor)
+  std::vector<ServerSocket*> servers_;
 
-	// Conexiones activas: fd → ClientConnection*
-	std::map<int, ClientConnection*>	_clients;
+  // Conexiones activas: fd → ClientConnection*
+  std::map<int, ClientConnection*> clients_;
 
-	// Mapa rápido: fd del server → puntero ServerSocket (para saber cuál aceptó)
-	std::map<int, ServerSocket*>		_serverFdMap;
+  // Mapa rápido: fd del server → puntero ServerSocket (para saber cuál aceptó)
+  std::map<int, ServerSocket*> serverFdMap_;
 
-	// Array que se pasa a poll()
-	std::vector<struct pollfd>			_pollfds;
+  // Array que se pasa a poll()
+  std::vector<struct pollfd> pollfds_;
 
-	// Flag de control del loop
-	bool								_running;
+  // Flag de control del loop
+  bool running_;
 
-	// ─── Gestión del array de poll ──────────────────────────────────────────
-	void	_rebuildPollFds();
-	void	_addFdToPoll(int fd, short events);
-	void	_removeFdFromPoll(int fd);
-	void	_updatePollEvents(int fd, short events);
+  // ─── Gestión del array de poll ──────────────────────────────────────────
+  void rebuildPollFds();
+  void addFdToPoll(int fd, short events);
+  void removeFdFromPoll(int fd);
+  void updatePollEvents(int fd, short events);
 
-	// ─── Handlers de eventos ────────────────────────────────────────────────
-	void	_handleNewConnection(ServerSocket* server);
-	void	_handleClientRead(ClientConnection* client);
-	void	_handleClientWrite(ClientConnection* client);
-	void	_handleClientError(ClientConnection* client);
+  // ─── Handlers de eventos ────────────────────────────────────────────────
+  void handleNewConnection(ServerSocket* server);
+  void handleClientRead(ClientConnection* client);
+  void handleClientWrite(ClientConnection* client);
+  void handleClientError(ClientConnection* client);
 
-	// ─── Mantenimiento ──────────────────────────────────────────────────────
-	void	_cleanupTimedOutConnections();
-	void	_closeClient(int fd);
-	void	_closeAllConnections();
+  // ─── Mantenimiento ──────────────────────────────────────────────────────
+  void cleanupTimedOutConnections();
+  void closeClient(int fd);
+  void closeAllConnections();
 
-	// ─── Integración con Alex y Ángel ───────────────────────────────────────
-	void	_dispatchRequest(ClientConnection* client);
-	void	_enqueueResponse(int fd, const std::string& responseData);
+  // ─── Integración con Alex y Ángel ───────────────────────────────────────
+  void dispatchRequest(ClientConnection* client);
+  void enqueueResponse(int fd, const std::string& responseData);
 
-	// Orthodox Canonical Form: prohibir copia
-	PollManager(const PollManager&);
-	PollManager& operator=(const PollManager&);
+  // Orthodox Canonical Form: prohibir copia
+  PollManager(const PollManager&);
+  PollManager& operator=(const PollManager&);
 };
 
-#endif // POLLMANAGER_HPP
+#endif  // POLLMANAGER_H_

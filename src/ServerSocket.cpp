@@ -11,141 +11,119 @@
 /* ************************************************************************** */
 
 #include "ServerSocket.hpp"
-#include "SocketUtils.hpp"
-#include <sys/socket.h>
+
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <cerrno>
 #include <cstring>
-#include <stdexcept>
 #include <sstream>
+#include <stdexcept>
 
-// ─── Constructor / Destructor ───────────────────────────────────────────────
+#include "SocketUtils.hpp"
 
-ServerSocket::ServerSocket(const ServerConfig& config)
-	: _config(config)
-	, _fd(-1)
-{
-	std::memset(&_addr, 0, sizeof(_addr));
+/// ─── Constructor / Destructor ───────────────────────────────────────────────
+
+ServerSocket::ServerSocket(const ServerConfig& config) : config_(config), fd_(-1) {
+  std::memset(&addr_, 0, sizeof(addr_));
 }
 
-ServerSocket::~ServerSocket()
-{
-	if (_fd >= 0)
-	{
-		close(_fd);
-		SocketUtils::logInfo("ServerSocket closed on fd " + _fd);
-	}
+ServerSocket::~ServerSocket() {
+  if (fd_ >= 0) {
+    close(fd_);
+    std::ostringstream oss;
+    oss << "ServerSocket closed on fd " << fd_;
+    SocketUtils::logInfo(oss.str());
+  }
 }
 
 // ─── Inicialización pública ─────────────────────────────────────────────────
 
-void ServerSocket::init()
-{
-	_createSocket();
-	_setSocketOptions();
-	_bindSocket();
-	_listenSocket();
+void ServerSocket::init() {
+  createSocket();
+  setSocketOptions();
+  bindSocket();
+  listenSocket();
 
-	std::ostringstream oss;
-	oss << "Listening on " << _config.host << ":" << _config.port
-		<< " (fd=" << _fd << ")";
-	SocketUtils::logInfo(oss.str());
+  std::ostringstream oss;
+  oss << "Listening on " << config_.host << ":" << config_.port << " (fd=" << fd_ << ")";
+  SocketUtils::logInfo(oss.str());
 }
 
 // ─── Aceptar conexión ──────────────────────────────────────────────────────
 
-int ServerSocket::acceptClient(struct sockaddr_in& clientAddr) const
-{
-	socklen_t addrLen = sizeof(clientAddr);
-	int clientFd = accept(_fd, (struct sockaddr*)&clientAddr, &addrLen);
+int ServerSocket::acceptClient(struct sockaddr_in& clientAddr) const {
+  socklen_t addrLen = sizeof(clientAddr);
+  int clientFd = accept(fd_, (struct sockaddr*)&clientAddr, &addrLen);
 
-	if (clientFd < 0)
-	{
-		// EAGAIN/EWOULDBLOCK es normal en non-blocking: no hay clientes pendientes
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return -1;
-		SocketUtils::logError(std::string("accept() failed: ") + strerror(errno));
-		return -1;
-	}
+  if (clientFd < 0) {
+    // EAGAIN/EWOULDBLOCK es normal en non-blocking: no hay clientes pendientes
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
+      return -1;
+    SocketUtils::logError(std::string("accept() failed: ") + strerror(errno));
+    return -1;
+  }
 
-	// Marcar el FD del nuevo cliente como non-blocking
-	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0)
-	{
-		SocketUtils::logError("fcntl(O_NONBLOCK) failed on client fd");
-		close(clientFd);
-		return -1;
-	}
+  // Marcar el FD del nuevo cliente como non-blocking
+  if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) {
+    SocketUtils::logError("fcntl(O_NONBLOCK) failed on client fd");
+    close(clientFd);
+    return -1;
+  }
 
-	SocketUtils::logDebug("Accepted client fd=" + clientFd);
-	return clientFd;
+  std::ostringstream oss;
+  oss << "Accepted client fd=" << clientFd;
+  SocketUtils::logDebug(oss.str());
+  return clientFd;
 }
 
 // ─── Getters ────────────────────────────────────────────────────────────────
 
-int ServerSocket::getFd() const
-{
-	return _fd;
-}
+int ServerSocket::getFd() const { return fd_; }
 
-int ServerSocket::getPort() const
-{
-	return _config.port;
-}
+int ServerSocket::getPort() const { return config_.port; }
 
-const ServerConfig& ServerSocket::getConfig() const
-{
-	return _config;
-}
+const ServerConfig& ServerSocket::getConfig() const { return config_; }
 
 // ─── Helpers privados ───────────────────────────────────────────────────────
 
-void ServerSocket::_createSocket()
-{
-	_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (_fd < 0)
-		throw std::runtime_error(
-			std::string("socket() failed: ") + strerror(errno));
+void ServerSocket::createSocket() {
+  fd_ = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd_ < 0)
+    throw std::runtime_error(std::string("socket() failed: ") + strerror(errno));
 }
 
-void ServerSocket::_setSocketOptions()
-{
-	int opt = 1;
+void ServerSocket::setSocketOptions() {
+  int opt = 1;
 
-	// SO_REUSEADDR: permite reutilizar el puerto inmediatamente tras reiniciar
-	// sin esperar al TIME_WAIT del kernel TCP
-	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-		throw std::runtime_error(
-			std::string("setsockopt(SO_REUSEADDR) failed: ") + strerror(errno));
+  // SO_REUSEADDR: permite reutilizar el puerto inmediatamente tras reiniciar
+  // sin esperar al TIME_WAIT del kernel TCP
+  if (setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    throw std::runtime_error(std::string("setsockopt(SO_REUSEADDR) failed: ") + strerror(errno));
 
-	// O_NONBLOCK: crítico para que poll() funcione correctamente.
-	// Sin esto, accept()/recv()/send() bloquearían el proceso entero.
-	if (fcntl(_fd, F_SETFL, O_NONBLOCK) < 0)
-		throw std::runtime_error(
-			std::string("fcntl(O_NONBLOCK) failed: ") + strerror(errno));
+  // O_NONBLOCK: crítico para que poll() funcione correctamente.
+  // Sin esto, accept()/recv()/send() bloquearían el proceso entero.
+  if (fcntl(fd_, F_SETFL, O_NONBLOCK) < 0)
+    throw std::runtime_error(std::string("fcntl(O_NONBLOCK) failed: ") + strerror(errno));
 }
 
-void ServerSocket::_bindSocket()
-{
-	_addr.sin_family = AF_INET;
-	_addr.sin_port = htons(_config.port);
-	_addr.sin_addr.s_addr = SocketUtils::stringToAddr(_config.host);
+void ServerSocket::bindSocket() {
+  addr_.sin_family = AF_INET;
+  addr_.sin_port = htons(config_.port);
+  addr_.sin_addr.s_addr = SocketUtils::stringToAddr(config_.host);
 
-	if (bind(_fd, (struct sockaddr*)&_addr, sizeof(_addr)) < 0)
-	{
-		std::ostringstream oss;
-		oss << "bind() failed on " << _config.host << ":"
-			<< _config.port << ": " << strerror(errno);
-		throw std::runtime_error(oss.str());
-	}
+  if (bind(fd_, (struct sockaddr*)&addr_, sizeof(addr_)) < 0) {
+    std::ostringstream oss;
+    oss << "bind() failed on " << config_.host << ":" << config_.port << ": " << strerror(errno);
+    throw std::runtime_error(oss.str());
+  }
 }
 
-void ServerSocket::_listenSocket()
-{
-	// SOMAXCONN: máximo de conexiones pendientes en el backlog del kernel.
-	// En Linux, suele ser 128 o 4096 según /proc/sys/net/core/somaxconn.
-	if (listen(_fd, SOMAXCONN) < 0)
-		throw std::runtime_error(
-			std::string("listen() failed: ") + strerror(errno));
+void ServerSocket::listenSocket() {
+  // SOMAXCONN: máximo de conexiones pendientes en el backlog del kernel.
+  // En Linux, suele ser 128 o 4096 según /proc/sys/net/core/somaxconn.
+  if (listen(fd_, SOMAXCONN) < 0)
+    throw std::runtime_error(std::string("listen() failed: ") + strerror(errno));
 }
