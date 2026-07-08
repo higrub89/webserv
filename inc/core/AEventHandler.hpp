@@ -21,18 +21,18 @@ public:
    * @brief Construct a new AEventHandler object.
    * @param fd The file descriptor to monitor.
    */
-  AEventHandler(int fd) : fd_(fd) {}
+  AEventHandler(int fd);
 
   /**
    * @brief Virtual destructor to ensure proper cleanup of derived classes.
    */
-  virtual ~AEventHandler() {}
+  virtual ~AEventHandler();
 
   /**
    * @brief Get the managed file descriptor.
    * @return int The file descriptor.
    */
-  int getFd() const { return fd_; }
+  int getFd() const;
 
   /**
    * @brief Called when the file descriptor has data available to read (EPOLLIN).

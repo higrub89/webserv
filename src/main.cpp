@@ -1,11 +1,13 @@
+#include "EpollManager.hpp"
+
+int main(int argc, char* argv[]) {
+  (void)argc;
+  (void)argv;
+}
+
+/*
 #include <csignal>
 #include <iostream>
-#include <stdexcept>
-
-#include "PollManager.hpp"
-#include "ServerSocket.hpp"
-#include "SocketUtils.hpp"
-#include "Types.hpp"
 
 // Puntero global para que el signal handler pueda detener el loop
 static PollManager* g_manager = NULL;
@@ -59,3 +61,4 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
+*/
