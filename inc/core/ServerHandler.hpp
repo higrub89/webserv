@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 
 #include "AEventHandler.hpp"
-#include "ConfigStructures.hpp"
+#include "types/ConfigStructures.hpp"
 
 class EpollManager;
 

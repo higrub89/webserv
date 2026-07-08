@@ -1,8 +1,31 @@
+#include <csignal>
+#include <iostream>
+
 #include "EpollManager.hpp"
 
+volatile sig_atomic_t g_running = 1;
+
+static void signalHandler(int sig) {
+  (void)sig;
+  g_running = 0;
+}
+
 int main(int argc, char* argv[]) {
+  if (argc > 2) {
+    std::cerr << "Usage: ./webserver [config_file]" << std::endl;
+    return 1;
+  }
   (void)argc;
   (void)argv;
+
+  signal(SIGINT, signalHandler);   // Ctrl+C
+  signal(SIGTERM, signalHandler);  // kill
+  signal(SIGPIPE, SIG_IGN);        // Evitar crash por broken pipe
+
+  // TODO:
+  // - Parsear configuración (argv[1]) y crear ServerConfig por cada bloque server{}
+  // - Crear EpollManager
+  // - Crear ServerHandler por cada ServerConfig y registrarlo en EpollManager
 }
 
 /*

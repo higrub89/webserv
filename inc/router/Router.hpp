@@ -5,10 +5,10 @@
 #include <string>
 
 #include "ClientHandler.hpp"
-#include "ConfigStructures.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "IMethodHandler.hpp"
+#include "types/ConfigStructures.hpp"
 
 /**
  * @class Router
