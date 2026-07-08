@@ -1,6 +1,8 @@
 #ifndef AEVENTHANDLER_HPP_
 #define AEVENTHANDLER_HPP_
 
+#include <ctime>
+
 /**
  * @class AEventHandler
  * @brief Abstract base class representing any file descriptor monitored by the EpollManager.
@@ -49,6 +51,11 @@ public:
    * EPOLLRDHUP).
    */
   virtual void onDisconnect() = 0;
+
+  /**
+   * @brief Check if the handler has timed out. Defaults to false.
+   */
+  virtual bool isTimedOut(time_t current_time) const;
 };
 
 #endif  // AEVENTHANDLER_HPP_

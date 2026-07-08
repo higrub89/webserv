@@ -1,6 +1,8 @@
 #ifndef CLIENTHANDLER_HPP_
 #define CLIENTHANDLER_HPP_
 
+#include <sys/types.h>
+
 #include <ctime>
 #include <vector>
 
@@ -11,6 +13,8 @@
 
 class EpollManager;
 class Router;
+class CgiReadHandler;
+class CgiWriteHandler;
 
 /**
  * @class ClientHandler
@@ -36,6 +40,11 @@ private:
   HttpRequest request_;
   HttpResponse response_;
   int serverPort_;
+
+  // CGI tracking to prevent dangling pointers and resource leaks on client disconnect
+  CgiReadHandler* cgiReadHandler_;
+  CgiWriteHandler* cgiWriteHandler_;
+  pid_t cgiPid_;
 
   void processRequest();
   void resetForKeepAlive();
@@ -76,6 +85,16 @@ public:
    * @brief Check if the connection has been idle for too long.
    */
   bool isTimedOut(time_t current_time) const;
+
+  /**
+   * @brief Register the CGI process ID and handlers for clean up.
+   */
+  void registerCgi(pid_t pid, CgiReadHandler* read_h, CgiWriteHandler* write_h);
+
+  /**
+   * @brief Terminate and clean up the registered CGI handler.
+   */
+  void clearCgi();
 };
 
 #endif  // CLIENTHANDLER_HPP_
