@@ -9,7 +9,7 @@
 /*   Updated: 2026/06/28                              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
+/*
 #include "ServerSocket.hpp"
 
 #include <arpa/inet.h>
@@ -127,3 +127,4 @@ void ServerSocket::listenSocket() {
   if (listen(fd_, SOMAXCONN) < 0)
     throw std::runtime_error(std::string("listen() failed: ") + strerror(errno));
 }
+*/

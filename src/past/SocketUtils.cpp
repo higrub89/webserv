@@ -9,7 +9,7 @@
 /*   Updated: 2026/06/28                              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
+/*
 #include "SocketUtils.hpp"
 
 #include <arpa/inet.h>
@@ -63,3 +63,4 @@ void SocketUtils::logDebug(const std::string& msg) {
   (void)msg;
 #endif
 }
+*/

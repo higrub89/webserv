@@ -9,7 +9,7 @@
 /*   Updated: 2026/06/28                              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
+/*
 #include "ClientConnection.hpp"
 
 #include <sys/socket.h>
@@ -122,3 +122,4 @@ void ClientConnection::reset() {
   state_ = STATE_READING;
   lastActivity_ = std::time(NULL);
 }
+*/

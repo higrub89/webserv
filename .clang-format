@@ -6,7 +6,7 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
@@ -43,3 +43,7 @@ SortIncludes: true
 Standard: c++03
 TabWidth: 2
 UseTab: Never
+IndentPPDirectives: AfterHash
+InsertNewlineAtEOF: true
+
+

@@ -6,17 +6,20 @@ SRC_DIR	:= src
 OBJ_DIR	:= obj
 INC_DIR := inc
 
-INCFLAGS := -I $(INC_DIR)
+INCFLAGS := \
+  -I $(INC_DIR) \
+  -I $(INC_DIR)/core \
+  -I $(INC_DIR)/http \
+  -I $(INC_DIR)/router \
+  -I $(INC_DIR)/types
+
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -pedantic $(INCFLAGS) $(OPTFLAGS) -MMD -MP
 OPTFLAGS ?= -O2
 # LDLIBS :=
 
 SRCS := \
 	$(SRC_DIR)/main.cpp \
-  $(SRC_DIR)/ServerSocket.cpp \
-  $(SRC_DIR)/ClientConnection.cpp \
-  $(SRC_DIR)/PollManager.cpp \
-  $(SRC_DIR)/SocketUtils.cpp
+  $(SRC_DIR)/core/AEventHandler.cpp \
 
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)

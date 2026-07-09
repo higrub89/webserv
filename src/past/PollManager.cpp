@@ -9,7 +9,7 @@
 /*   Updated: 2026/06/28                              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
+/*
 #include "PollManager.hpp"
 
 #include <unistd.h>
@@ -300,3 +300,4 @@ void PollManager::closeAllConnections() {
   clients_.clear();
   pollfds_.clear();
 }
+*/
