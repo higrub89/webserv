@@ -22,6 +22,7 @@ OPTFLAGS ?= -O2
 SRCS := \
 	$(SRC_DIR)/main.cpp \
   $(SRC_DIR)/core/AEventHandler.cpp \
+  $(SRC_DIR)/core/Logger.cpp
 
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)

@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "EpollManager.hpp"
+#include "Logger.hpp"
 
 volatile sig_atomic_t g_running = 1;
 
@@ -15,6 +16,8 @@ int main(int argc, char* argv[], char* envp[]) {
     std::cerr << "Usage: ./webserver [config_file]" << std::endl;
     return 1;
   }
+  Logger::info("WebServer starting...");
+  Logger::debug("Debug mode is enabled.");
   (void)argc;
   (void)argv;
   (void)envp;
