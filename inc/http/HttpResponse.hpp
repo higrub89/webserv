@@ -19,10 +19,7 @@ private:
   std::vector<char> body_;
 
 public:
-  // Orthodox Canonical Form
   HttpResponse();
-  HttpResponse(const HttpResponse& other);
-  HttpResponse& operator=(const HttpResponse& other);
   ~HttpResponse();
 
   /**
@@ -44,11 +41,13 @@ public:
    * @param max_age Expiry time in seconds (-1 to ignore).
    * @param http_only Restrict Javascript access (defaults to true).
    */
-  void setCookie(const std::string& key, const std::string& value, const std::string& path = "/",
-                 int max_age = -1, bool http_only = true);
+  void setCookie(const std::string& key, const std::string& value,
+                 const std::string& path = "/", int max_age = -1,
+                 bool http_only = true);
 
   /**
-   * @brief Serializes the HTTP status line, headers, and body into a raw byte buffer.
+   * @brief Serializes the HTTP status line, headers, and body into a raw byte
+   * buffer.
    * @return std::vector<char> The formatted byte buffer.
    */
   std::vector<char> serialize() const;

@@ -27,14 +27,12 @@ private:
   std::map<std::string, std::string> cookies_;
 
 public:
-  // Orthodox Canonical Form
   HttpRequest();
-  HttpRequest(const HttpRequest& other);
-  HttpRequest& operator=(const HttpRequest& other);
   ~HttpRequest();
 
   /**
-   * @brief Clears internal fields logically so the object can be recycled under high load.
+   * @brief Clears internal fields logically so the object can be recycled under
+   * high load.
    */
   void reset();
 
@@ -61,7 +59,8 @@ public:
   void setKeepAlive(bool keep_alive);
 
   /**
-   * @brief Parses the raw "Cookie" headers inside headers_ map to populate cookies_.
+   * @brief Parses the raw "Cookie" headers inside headers_ map to populate
+   * cookies_.
    */
   void parseCookies();
 };

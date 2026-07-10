@@ -12,7 +12,8 @@
 
 /**
  * @class EpollManager
- * @brief Manages the epoll event loop and dispatches events to registered handlers.
+ * @brief Manages the epoll event loop and dispatches events to registered
+ * handlers.
  *
  * Replaces: PollManager.hpp
  */
@@ -27,10 +28,6 @@ private:
 
   // Sweeps monitored handlers to close connections that have timed out
   void cleanupTimeouts();
-
-  // Prevent copying (Orthodox Canonical Form requirement for resource classes)
-  EpollManager(const EpollManager& other);
-  EpollManager& operator=(const EpollManager& other);
 
 public:
   EpollManager();
@@ -54,7 +51,8 @@ public:
   /**
    * @brief Registers a handler in epoll.
    * @param handler The handler to register.
-   * @param events The epoll events bitmask (e.g., EPOLLIN, EPOLLOUT, EPOLLRDHUP).
+   * @param events The epoll events bitmask (e.g., EPOLLIN, EPOLLOUT,
+   * EPOLLRDHUP).
    */
   void addHandler(AEventHandler* handler, uint32_t events);
 

@@ -40,10 +40,6 @@ private:
   bool parseChunkHeader();
   void resolveBodyType(HttpRequest& req);
 
-  // Prevent copying (Orthodox Canonical Form requirement for non-copyable classes)
-  HttpParser(const HttpParser& other);
-  HttpParser& operator=(const HttpParser& other);
-
 public:
   /**
    * @brief Construct a new HttpParser.
@@ -59,7 +55,8 @@ public:
 
   /**
    * @brief Consume incoming network bytes, parsing them incrementally.
-   * @param raw_buffer Buffer containing received network bytes. Bytes parsed are erased from it.
+   * @param raw_buffer Buffer containing received network bytes. Bytes parsed
+   * are erased from it.
    * @param req Target HttpRequest object to populate.
    * @return true If parsing has successfully completed.
    * @return false If more bytes are required, or if a parse error occurred.

@@ -11,6 +11,8 @@ INCFLAGS := \
   -I $(INC_DIR)/core \
   -I $(INC_DIR)/http \
   -I $(INC_DIR)/router \
+  -I $(INC_DIR)/cgi \
+  -I $(INC_DIR)/methods \
   -I $(INC_DIR)/types
 
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -pedantic $(INCFLAGS) $(OPTFLAGS) -MMD -MP
