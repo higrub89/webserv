@@ -5,11 +5,10 @@
 
 class CgiMethodHandler : public IMethodHandler {
 private:
-  CgiMethodHandler(const CgiMethodHandler& other);
-  CgiMethodHandler& operator=(const CgiMethodHandler& other);
+  char** envp_;
 
 public:
-  CgiMethodHandler();
+  CgiMethodHandler(char** envp);
   virtual ~CgiMethodHandler();
 
   /**

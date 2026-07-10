@@ -5,18 +5,14 @@
 
 /**
  * @class AEventHandler
- * @brief Abstract base class representing any file descriptor monitored by the EpollManager.
+ * @brief Abstract base class representing any file descriptor monitored by the
+ * EpollManager.
  *
  * Replaces: IEventHandler.hpp (or direct raw socket management in old codebase)
  */
 class AEventHandler {
 protected:
   int fd_;
-
-private:
-  // Non-copyable (Orthodox Canonical Form requirement for resource classes)
-  AEventHandler(const AEventHandler& other);
-  AEventHandler& operator=(const AEventHandler& other);
 
 public:
   /**
@@ -37,18 +33,20 @@ public:
   int getFd() const;
 
   /**
-   * @brief Called when the file descriptor has data available to read (EPOLLIN).
+   * @brief Called when the file descriptor has data available to read
+   * (EPOLLIN).
    */
   virtual void onReadReady() = 0;
 
   /**
-   * @brief Called when the file descriptor is ready for writing without blocking (EPOLLOUT).
+   * @brief Called when the file descriptor is ready for writing without
+   * blocking (EPOLLOUT).
    */
   virtual void onWriteReady() = 0;
 
   /**
-   * @brief Called when a disconnection, error, or hang-up occurs (EPOLLERR | EPOLLHUP |
-   * EPOLLRDHUP).
+   * @brief Called when a disconnection, error, or hang-up occurs (EPOLLERR |
+   * EPOLLHUP | EPOLLRDHUP).
    */
   virtual void onDisconnect() = 0;
 

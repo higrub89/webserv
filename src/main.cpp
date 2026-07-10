@@ -10,20 +10,22 @@ static void signalHandler(int sig) {
   g_running = 0;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[], char* envp[]) {
   if (argc > 2) {
     std::cerr << "Usage: ./webserver [config_file]" << std::endl;
     return 1;
   }
   (void)argc;
   (void)argv;
+  (void)envp;
 
   signal(SIGINT, signalHandler);   // Ctrl+C
   signal(SIGTERM, signalHandler);  // kill
   signal(SIGPIPE, SIG_IGN);        // Evitar crash por broken pipe
 
   // TODO:
-  // - Parsear configuración (argv[1]) y crear ServerConfig por cada bloque server{}
+  // - Parsear configuración (argv[1]) y crear ServerConfig por cada bloque
+  // server{}
   // - Crear EpollManager
   // - Crear ServerHandler por cada ServerConfig y registrarlo en EpollManager
 }

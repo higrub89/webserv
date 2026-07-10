@@ -29,10 +29,6 @@ private:
   // Sweeps monitored handlers to close connections that have timed out
   void cleanupTimeouts();
 
-  // Prevent copying (Orthodox Canonical Form requirement for resource classes)
-  EpollManager(const EpollManager& other);
-  EpollManager& operator=(const EpollManager& other);
-
 public:
   EpollManager();
   ~EpollManager();

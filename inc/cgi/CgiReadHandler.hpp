@@ -21,24 +21,20 @@ class ClientHandler;
  */
 class CgiReadHandler : public AEventHandler {
 private:
-  EpollManager* epollManager_;
-  ClientHandler* client_;
+  EpollManager& epollManager_;
+  ClientHandler& client_;
   pid_t cgiPid_;
-
-  // Prevent copying (Orthodox Canonical Form requirement for resource classes)
-  CgiReadHandler(const CgiReadHandler& other);
-  CgiReadHandler& operator=(const CgiReadHandler& other);
 
 public:
   /**
    * @brief Construct a new CgiReadHandler.
    * @param stdout_fd The read-end of the pipe connected to CGI stdout.
-   * @param epoll_manager Pointer to the central EpollManager.
-   * @param client Pointer to the ClientHandler waiting for the CGI output.
+   * @param epoll_manager Reference to the central EpollManager.
+   * @param client Reference to the ClientHandler waiting for the CGI output.
    * @param cgi_pid The process ID of the CGI child process to reap later.
    */
-  CgiReadHandler(int stdout_fd, EpollManager* epoll_manager,
-                 ClientHandler* client, pid_t cgi_pid);
+  CgiReadHandler(int stdout_fd, EpollManager& epoll_manager,
+                 ClientHandler& client, pid_t cgi_pid);
   virtual ~CgiReadHandler();
 
   // Implement AEventHandler interfaces

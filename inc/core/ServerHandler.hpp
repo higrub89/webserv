@@ -7,6 +7,7 @@
 #include "types/ConfigStructures.hpp"
 
 class EpollManager;
+class Router;
 
 /**
  * @class ServerHandler
@@ -16,35 +17,36 @@ class EpollManager;
  */
 class ServerHandler : public AEventHandler {
 private:
-  ServerConfig config_;
-  EpollManager* epollManager_;
+  const ServerConfig& config_;
+  EpollManager& epollManager_;
+  Router& router_;
   struct sockaddr_in address_;
   int port_;
-
-  // Prevent copying (Orthodox Canonical Form requirement for resource classes)
-  ServerHandler(const ServerHandler& other);
-  ServerHandler& operator=(const ServerHandler& other);
 
 public:
   /**
    * @brief Construct a new ServerHandler.
    * @param port The port to bind and listen on.
    * @param config Configuration rules for this virtual server.
-   * @param epoll_manager Pointer to the event loop manager.
+   * @param epoll_manager Reference to the event loop manager.
+   * @param router Reference to the router for dispatching requests.
    */
-  ServerHandler(int port, const ServerConfig& config, EpollManager* epoll_manager);
+  ServerHandler(int port, const ServerConfig& config,
+                EpollManager& epoll_manager, Router& router);
   virtual ~ServerHandler();
 
   /**
-   * @brief Binds the socket to the port, sets it to non-blocking, and calls listen().
+   * @brief Binds the socket to the port, sets it to non-blocking, and calls
+   * listen().
    */
   void setup();
 
   // Implement AEventHandler interfaces
-  virtual void onReadReady();   // Accept incoming connection, instantiate ClientHandler, and
-                                // register it in epoll.
+  virtual void onReadReady();   // Accept incoming connection, instantiate
+                                // ClientHandler, and register it in epoll.
   virtual void onWriteReady();  // No-op for listening sockets.
-  virtual void onDisconnect();  // Error handling / recovery for the listening socket.
+  virtual void
+  onDisconnect();  // Error handling / recovery for the listening socket.
 };
 
 #endif  // SERVERHANDLER_HPP_

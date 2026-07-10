@@ -16,7 +16,8 @@ struct SessionData {
 
 /**
  * @class SessionManager
- * @brief Manages active sessions in memory, handles session lifecycles and expirations.
+ * @brief Manages active sessions in memory, handles session lifecycles and
+ * expirations.
  *
  * Part of: Cookies and Session Management (Bonus requirement)
  */
@@ -28,14 +29,11 @@ private:
   // Generates a random alphanumeric session ID.
   std::string generateSessionId() const;
 
-  // Prevent copying (Orthodox Canonical Form requirement for manager classes)
-  SessionManager(const SessionManager& other);
-  SessionManager& operator=(const SessionManager& other);
-
 public:
   /**
    * @brief Construct a new SessionManager.
-   * @param timeoutInSeconds Expiration timeout (defaults to 1800s / 30 minutes).
+   * @param timeoutInSeconds Expiration timeout (defaults to 1800s / 30
+   * minutes).
    */
   SessionManager(time_t timeoutInSeconds = 1800);
   ~SessionManager();
