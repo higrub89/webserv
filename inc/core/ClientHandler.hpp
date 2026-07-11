@@ -91,6 +91,11 @@ public:
    */
   bool isTimedOut(time_t current_time) const;
 
+  // Getters for CGI execution context
+  EpollManager& getEpollManager() const { return epollManager_; }
+  Router& getRouter() const { return router_; }
+  int getServerPort() const { return serverPort_; }
+
   /**
    * @brief Register the CGI process ID and handlers for clean up.
    */
