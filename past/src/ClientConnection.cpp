@@ -109,9 +109,9 @@ void ClientConnection::queueResponse(const RawResponse& response) {
 int ClientConnection::getFd() const { return fd_; }
 ConnectionState ClientConnection::getState() const { return state_; }
 void ClientConnection::setState(ConnectionState state) { state_ = state; }
-const ServerConfig& ClientConnection::getServerConfig() const { return serverConfig_; }
-bool ClientConnection::isKeepAlive() const { return keepAlive_; }
-void ClientConnection::setKeepAlive(bool val) { keepAlive_ = val; }
+const ServerConfig& ClientConnection::getServerConfig() const { return
+serverConfig_; } bool ClientConnection::isKeepAlive() const { return keepAlive_;
+} void ClientConnection::setKeepAlive(bool val) { keepAlive_ = val; }
 
 // ─── Reset para keep-alive ─────────────────────────────────────────────────
 
