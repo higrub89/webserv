@@ -84,6 +84,12 @@ public:
   void appendToOutput(const std::vector<char>& data);
 
   /**
+   * @brief Append raw bytes to the output buffer to be sent in the next write
+   * cycles.
+   */
+  void appendToOutput(const char* data, size_t len);
+
+  /**
    * @brief Transition the client's macro-state.
    */
   void changeState(ClientState new_state);

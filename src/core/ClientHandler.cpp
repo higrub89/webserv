@@ -43,6 +43,10 @@ void ClientHandler::appendToOutput(const std::vector<char>& data) {
   rawOutBuffer_.insert(rawOutBuffer_.end(), data.begin(), data.end());
 }
 
+void ClientHandler::appendToOutput(const char* data, size_t len) {
+  rawOutBuffer_.insert(rawOutBuffer_.end(), data, data + len);
+}
+
 void ClientHandler::changeState(ClientState new_state) {
   state_ = new_state;
 }

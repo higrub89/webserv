@@ -16,6 +16,7 @@ CgiReadHandler::CgiReadHandler(int stdout_fd, EpollManager& epoll_manager,
     client_(client),
     cgiPid_(cgi_pid),
     headersParsed_(false) {
+  readBuffer_.reserve(kMaxHeadersSize);
   epollManager_.addHandler(this, EPOLLIN | EPOLLRDHUP);
 }
 
@@ -41,8 +42,7 @@ void CgiReadHandler::onReadReady() {
 
   if (bytes_read > 0) {
     if (headersParsed_) {
-      std::vector<char> data(buffer, buffer + bytes_read);
-      client_.appendToOutput(data);
+      client_.appendToOutput(buffer, bytes_read);
     } else {
       readBuffer_.insert(readBuffer_.end(), buffer, buffer + bytes_read);
       // Safeguard: Limit CGI headers to prevent memory exhaustion (OOM)
@@ -55,9 +55,9 @@ void CgiReadHandler::onReadReady() {
       if (header_end_idx != std::string::npos) {
         std::string header_str(readBuffer_.begin(),
                                readBuffer_.begin() + header_end_idx);
-        std::vector<char> body(
-          readBuffer_.begin() + header_end_idx + delimiter_len,
-          readBuffer_.end());
+        const char* body_ptr = &readBuffer_[header_end_idx + delimiter_len];
+        size_t body_size =
+          readBuffer_.size() - (header_end_idx + delimiter_len);
 
         std::string status_line = "HTTP/1.1 200 OK\r\n";
         std::string extra_headers;
@@ -82,16 +82,15 @@ void CgiReadHandler::onReadReady() {
           }
         }
         std::string final_headers = status_line + extra_headers + "\r\n";
-        std::vector<char> output_data(final_headers.begin(),
-                                      final_headers.end());
-        output_data.insert(output_data.end(), body.begin(), body.end());
-        client_.appendToOutput(output_data);
+        client_.appendToOutput(final_headers.data(), final_headers.size());
+        if (body_size > 0) {
+          client_.appendToOutput(body_ptr, body_size);
+        }
         headersParsed_ = true;
         readBuffer_.clear();
       }
     }
-  } else if (bytes_read == 0) {
-    // bytes_read == 0 (EOF): CGI finished.
+  } else if (bytes_read == 0) {  // CGI finished
     int status;
     pid_t reaped = waitpid(cgiPid_, &status, WNOHANG);
     if (reaped == 0) {
@@ -103,8 +102,7 @@ void CgiReadHandler::onReadReady() {
 
     bool success = false;
     if (reaped == cgiPid_) {
-      cgiPid_ =
-        -1;  // Prevent double-wait or killing a reused PID in destructor
+      cgiPid_ = -1;
       if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
         success = true;
       }
@@ -113,11 +111,10 @@ void CgiReadHandler::onReadReady() {
     if (!headersParsed_) {
       if (success) {
         std::string default_status = "HTTP/1.1 200 OK\r\n\r\n";
-        std::vector<char> output_data(default_status.begin(),
-                                      default_status.end());
-        output_data.insert(output_data.end(), readBuffer_.begin(),
-                           readBuffer_.end());
-        client_.appendToOutput(output_data);
+        client_.appendToOutput(default_status.data(), default_status.size());
+        if (!readBuffer_.empty()) {
+          client_.appendToOutput(&readBuffer_[0], readBuffer_.size());
+        }
         headersParsed_ = true;
         readBuffer_.clear();
         client_.changeState(ClientHandler::WRITING_RESPONSE);
@@ -130,22 +127,18 @@ void CgiReadHandler::onReadReady() {
         client_.changeState(ClientHandler::WRITING_RESPONSE);
         client_.clearCgi();
       } else {
-        // CGI crashed/exited with error after writing headers. Abort partial
-        // output.
         client_.handleCgiError();
       }
     }
-  } else {
-    // bytes_read < 0: read error occurred.
+  } else {  // bytes_read < 0: read error occurred.
     client_.handleCgiError();
   }
 }
 
 void CgiReadHandler::onWriteReady() {
-  // No-op for read handler
+  // * No-op for read handler
 }
 
-void CgiReadHandler::onDisconnect() {
-  // premature close / error
+void CgiReadHandler::onDisconnect() {  // premature close / error
   client_.handleCgiError();
 }
