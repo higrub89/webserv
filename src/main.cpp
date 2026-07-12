@@ -1,7 +1,6 @@
 #include <csignal>
 #include <iostream>
 
-#include "CgiMethodHandler.hpp"
 #include "EpollManager.hpp"
 #include "Logger.hpp"
 
@@ -29,8 +28,6 @@ int main(int argc, char* argv[], char* envp[]) {
     // server{}
     // - Crear EpollManager
     // - Crear ServerHandler por cada ServerConfig y registrarlo en EpollManager
-  } catch (const CgiMethodHandler::ChildProcessExitException& e) {
-    return 1;
   } catch (const std::exception& e) {
     // TODO
     // Checkear si es necesario loggear algo, o hacer algo especifico

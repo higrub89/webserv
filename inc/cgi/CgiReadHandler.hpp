@@ -20,10 +20,16 @@ class ClientHandler;
  * of webserv)
  */
 class CgiReadHandler : public AEventHandler {
+public:
+  static const size_t kBufferSize = 4096;
+  static const size_t kMaxHeadersSize = 8192;
+
 private:
   EpollManager& epollManager_;
   ClientHandler& client_;
   pid_t cgiPid_;
+  std::vector<char> readBuffer_;
+  bool headersParsed_;
 
 public:
   /**
