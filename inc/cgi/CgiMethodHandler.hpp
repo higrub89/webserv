@@ -1,28 +1,34 @@
 #ifndef CGIMETHODHANDLER_HPP_
 #define CGIMETHODHANDLER_HPP_
 
+#include <sys/types.h>
+
+#include <string>
+#include <vector>
+
+#include "CgiStructures.hpp"
 #include "ConfigStructures.hpp"
 #include "IMethodHandler.hpp"
 
 class CgiMethodHandler : public IMethodHandler {
+public:
 private:
   char** envp_;
 
-  std::string getCgiExecutable(const std::string& script_path,
-                               const LocationConfig& locationConfig) const;
+  // Private helper methods
+  void parseUri(CgiRequestContext& ctx);
+  bool resolveAndValidatePaths(CgiRequestContext& ctx,
+                               const LocationConfig& location);
+  bool createPipes(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2]);
+  void executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2],
+                    char** child_env);
+  void setupParent(CgiRequestContext& ctx, pid_t pid, int in_pipe[2],
+                   int out_pipe[2]);
+
+  std::vector<char*> buildChildEnv(CgiRequestContext& ctx,
+                                   std::vector<std::string>& env_strings);
 
 public:
-  /**
-   * @class ChildProcessExitException
-   * @brief Exception thrown when a CGI child process exits with an error.
-   */
-  class ChildProcessExitException : public std::exception {
-  public:
-    virtual const char* what() const throw() {
-      return "CGI child process exited with an error.";
-    }
-  };
-
   CgiMethodHandler(char** envp);
   virtual ~CgiMethodHandler();
 
@@ -37,4 +43,5 @@ public:
   void handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client,
               const LocationConfig& location);
 };
+
 #endif  // CGIMETHODHANDLER_HPP_

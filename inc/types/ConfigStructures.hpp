@@ -17,8 +17,8 @@ struct LocationConfig {
   bool autoindex;
   std::string index_file;
 
-  // Maps CGI extensions (e.g., ".py", ".php") to their respective executable binaries.
-  // Resolves: Multi-CGI parallel support bonus requirement.
+  // Maps CGI extensions (e.g., ".py", ".php") to their respective executable
+  // binaries. Resolves: Multi-CGI parallel support bonus requirement.
   std::map<std::string, std::string> cgi_handlers;
 
   std::string return_redirect;
@@ -44,12 +44,14 @@ struct ServerConfig {
  * @struct VirtualHostGroup
  * @brief Groups virtual servers sharing the same physical bind port.
  *
- * Replaces: None (Introduced to prevent EADDRINUSE by allowing one socket bind per port)
+ * Replaces: None (Introduced to prevent EADDRINUSE by allowing one socket bind
+ * per port)
  */
 struct VirtualHostGroup {
   std::string ip;
   int port;
-  std::vector<ServerConfig> servers;  // Index 0 represents the default_server for this port.
+  std::vector<ServerConfig>
+    servers;  // Index 0 represents the default_server for this port.
 };
 
 // Type definition mapping "IP:Port" or "Port" string to its VirtualHostGroup.
