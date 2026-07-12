@@ -24,6 +24,7 @@ SRCS := \
   $(SRC_DIR)/cgi/CgiReadHandler.cpp \
   $(SRC_DIR)/cgi/CgiWriteHandler.cpp \
   $(SRC_DIR)/core/AEventHandler.cpp \
+  $(SRC_DIR)/core/ClientHandler.cpp \
   $(SRC_DIR)/core/Logger.cpp \
   $(SRC_DIR)/core/Utils.cpp
 

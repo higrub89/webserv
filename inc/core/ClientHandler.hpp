@@ -45,6 +45,7 @@ private:
   HttpRequest request_;
   HttpResponse response_;
   int serverPort_;
+  std::string clientIp_;
 
   // CGI tracking to prevent dangling pointers and resource leaks on client
   // disconnect
@@ -62,9 +63,10 @@ public:
    * @param epoll_manager Reference to the central EpollManager.
    * @param router Reference to the application router.
    * @param server_port The local port this client connected to.
+   * @param client_ip The remote IP address of the client.
    */
   ClientHandler(int fd, EpollManager& epoll_manager, Router& router,
-                int server_port);
+                int server_port, const std::string& client_ip);
   virtual ~ClientHandler();
 
   // Implement AEventHandler interfaces
@@ -95,6 +97,7 @@ public:
   EpollManager& getEpollManager() const { return epollManager_; }
   Router& getRouter() const { return router_; }
   int getServerPort() const { return serverPort_; }
+  const std::string& getClientIp() const { return clientIp_; }
 
   /**
    * @brief Register the CGI process ID and handlers for clean up.
@@ -105,6 +108,12 @@ public:
    * @brief Terminate and clean up the registered CGI handler.
    */
   void clearCgi();
+
+  /**
+   * @brief Handle CGI execution error: discards partial output and prepares a
+   * 500 response.
+   */
+  void handleCgiError();
 };
 
 #endif  // CLIENTHANDLER_HPP_
