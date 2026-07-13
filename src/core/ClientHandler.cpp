@@ -65,8 +65,7 @@ void ClientHandler::onReadReady() {
       response_.setHeader("Connection", "close");
       response_.setBody("Bad Request");
       appendToOutput(response_.serialize());
-      state_ = WRITING_RESPONSE;
-      epollManager_.updateHandlerEvents(this, EPOLLOUT | EPOLLRDHUP);
+      changeState(WRITING_RESPONSE);
     }
   } else if (n == 0) {
     onDisconnect();
@@ -138,8 +137,7 @@ void ClientHandler::processRequest() {
   std::vector<char> data(raw.begin(), raw.end());
   appendToOutput(data);
 
-  state_ = WRITING_RESPONSE;
-  epollManager_.updateHandlerEvents(this, EPOLLOUT | EPOLLRDHUP);
+  changeState(WRITING_RESPONSE);
 }
 
 // ─── resetForKeepAlive ──────────────────────────────────────────────────────
@@ -150,9 +148,8 @@ void ClientHandler::resetForKeepAlive() {
   parser_.reset();
   request_.reset();
   response_.reset();
-  state_ = READING_REQUEST;
   lastActivityTime_ = std::time(NULL);
-  epollManager_.updateHandlerEvents(this, EPOLLIN | EPOLLRDHUP);
+  changeState(READING_REQUEST);
 }
 
 // ─── Utilidades ─────────────────────────────────────────────────────────────
@@ -164,8 +161,16 @@ void ClientHandler::appendToOutput(const std::vector<char>& data) {
 void ClientHandler::appendToOutput(const char* data, size_t len) {
   rawOutBuffer_.insert(rawOutBuffer_.end(), data, data + len);
 }
+
 void ClientHandler::changeState(ClientState new_state) {
   state_ = new_state;
+  if (state_ == READING_REQUEST) {
+    epollManager_.updateHandlerEvents(this, EPOLLIN | EPOLLRDHUP);
+  } else if (state_ == WAITING_FOR_CGI || state_ == PROCESSING) {
+    epollManager_.updateHandlerEvents(this, EPOLLRDHUP);
+  } else if (state_ == WRITING_RESPONSE) {
+    epollManager_.updateHandlerEvents(this, EPOLLOUT | EPOLLRDHUP);
+  }
 }
 
 bool ClientHandler::isTimedOut(time_t current_time) const {
@@ -226,5 +231,4 @@ void ClientHandler::handleCgiError() {
 
   appendToOutput(response_.serialize());
   changeState(WRITING_RESPONSE);
-  epollManager_.updateHandlerEvents(this, EPOLLOUT | EPOLLRDHUP);
 }

@@ -20,7 +20,6 @@ EpollManager::EpollManager() : epollFd_(-1), running_(false) {
 }
 
 EpollManager::~EpollManager() {
-  // Copiar el mapa para iterar de forma segura (delete puede modificar handlers_)
   std::map<int, AEventHandler*> copy = handlers_;
   handlers_.clear();
   for (std::map<int, AEventHandler*>::iterator it = copy.begin();
@@ -37,8 +36,8 @@ EpollManager::~EpollManager() {
 void EpollManager::init() {
   epollFd_ = epoll_create(1);
   if (epollFd_ < 0)
-    throw std::runtime_error(
-        std::string("epoll_create failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("epoll_create failed: ") +
+                             strerror(errno));
 }
 
 // ─── Bucle central de eventos ───────────────────────────────────────────────
@@ -47,8 +46,7 @@ void EpollManager::run() {
   running_ = true;
 
   while (running_ && g_running) {
-    int nready =
-        epoll_wait(epollFd_, events_, MAX_EVENTS, EPOLL_TIMEOUT_MS);
+    int nready = epoll_wait(epollFd_, events_, MAX_EVENTS, EPOLL_TIMEOUT_MS);
 
     if (nready < 0) {
       if (errno == EINTR)
@@ -132,6 +130,8 @@ void EpollManager::cleanupTimeouts() {
       expired.push_back(it->second);
   }
 
-  for (size_t i = 0; i < expired.size(); ++i)
-    removeHandler(expired[i]);
+  for (size_t i = 0; i < expired.size(); ++i) {
+    if (handlers_.count(expired[i]->getFd()) > 0)
+      expired[i]->onDisconnect();
+  }
 }
