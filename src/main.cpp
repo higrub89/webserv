@@ -1,7 +1,11 @@
 #include <csignal>
 #include <iostream>
+#include <stdexcept>
 
 #include "EpollManager.hpp"
+#include "Router.hpp"
+#include "ServerHandler.hpp"
+#include "types/ConfigStructures.hpp"
 
 volatile sig_atomic_t g_running = 1;
 
@@ -12,73 +16,45 @@ static void signalHandler(int sig) {
 
 int main(int argc, char* argv[], char* envp[]) {
   if (argc > 2) {
-    std::cerr << "Usage: ./webserver [config_file]" << std::endl;
+    std::cerr << "Usage: ./webserv [config_file]" << std::endl;
     return 1;
   }
-  (void)argc;
   (void)argv;
-  (void)envp;
 
-  signal(SIGINT, signalHandler);   // Ctrl+C
-  signal(SIGTERM, signalHandler);  // kill
-  signal(SIGPIPE, SIG_IGN);        // Evitar crash por broken pipe
-
-  // TODO:
-  // - Parsear configuración (argv[1]) y crear ServerConfig por cada bloque
-  // server{}
-  // - Crear EpollManager
-  // - Crear ServerHandler por cada ServerConfig y registrarlo en EpollManager
-}
-
-/*
-#include <csignal>
-#include <iostream>
-
-// Puntero global para que el signal handler pueda detener el loop
-static PollManager* g_manager = NULL;
-
-static void signalHandler(int sig) {
-  (void)sig;
-  if (g_manager)
-    g_manager->stop();
-}
-
-int main(int argc, char* argv[]) {
-  // ── Validar argumentos ──────────────────────────────────────────────
-  if (argc > 2) {
-    std::cerr << "Usage: ./webserver [config_file]" << std::endl;
-    return 1;
-  }
-  (void)argv;  // TODO: pasar a ConfigParser de Alex
-
-  // ── Configurar signal handlers ──────────────────────────────────────
-  signal(SIGINT, signalHandler);   // Ctrl+C
-  signal(SIGTERM, signalHandler);  // kill
-  signal(SIGPIPE, SIG_IGN);        // Evitar crash por broken pipe
+  signal(SIGINT, signalHandler);
+  signal(SIGTERM, signalHandler);
+  signal(SIGPIPE, SIG_IGN);
 
   try {
-    // ── Parsear configuración (TODO: Alex) ──────────────────────────
-    // std::vector<ServerConfig> configs = ConfigParser::parse(argv[1]);
-    //
-    // STUB TEMPORAL: un servidor hardcoded en puerto 8080
+    // ── Config stub (TODO: Alex — ConfigParser) ─────────────────────
     ServerConfig defaultConfig;
-    defaultConfig.host = "0.0.0.0";
-    defaultConfig.port = 8080;
-    defaultConfig.serverName = "localhost";
+    defaultConfig.client_max_body_size = 1048576;
+    defaultConfig.server_names.push_back("localhost");
 
-    // ── Crear PollManager ───────────────────────────────────────────
-    PollManager manager;
-    g_manager = &manager;
+    VirtualHostGroup vhg;
+    vhg.ip = "0.0.0.0";
+    vhg.port = 8080;
+    vhg.servers.push_back(defaultConfig);
 
-    // ── Crear ServerSocket por cada bloque server{} ─────────────────
-    ServerSocket* server = new ServerSocket(defaultConfig);
-    server->init();
-    manager.addServer(server);
+    ConfigMap configMap;
+    configMap["8080"] = vhg;
 
-    // ── Arrancar event-loop (bloquea hasta SIGINT) ──────────────────
-    SocketUtils::logInfo("WebServer starting...");
-    manager.run();
-    SocketUtils::logInfo("WebServer shutdown complete");
+    // ── Crear componentes ───────────────────────────────────────────
+    Router router(configMap, envp);
+    EpollManager epoll;
+    epoll.init();
+
+    // ── Crear ServerHandler por cada puerto ──────────────────────────
+    ServerHandler* server =
+        new ServerHandler(8080, defaultConfig, epoll, router);
+    server->setup();
+    epoll.addHandler(server, EPOLLIN);
+
+    // ── Arrancar event-loop ─────────────────────────────────────────
+    std::cout << "[INFO]  WebServer starting..." << std::endl;
+    epoll.run();
+    std::cout << "[INFO]  WebServer shutdown complete" << std::endl;
+
   } catch (const std::exception& e) {
     std::cerr << "Fatal: " << e.what() << std::endl;
     return 1;
@@ -86,4 +62,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-*/
