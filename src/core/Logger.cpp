@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <iostream>
+#include <sstream>
 
 std::string Logger::timestamp() {
   char buf[64];
@@ -27,4 +28,20 @@ void Logger::debug(const std::string& msg) {
   if (DEBUG)
     std::cout << timestamp() << " " << ANSI_DEBUG << "[DEBUG]" << ANSI_RESET
               << " " << msg << std::endl;
+}
+
+std::string Logger::addrToString(const struct sockaddr_in& addr) {
+  char ip[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof(ip));
+
+  std::ostringstream oss;
+  oss << ip << ":" << ntohs(addr.sin_port);
+  return oss.str();
+}
+
+in_addr_t Logger::stringToAddr(const std::string& ip) {
+  struct in_addr addr;
+  if (inet_pton(AF_INET, ip.c_str(), &addr) != 1)
+    return INADDR_ANY;
+  return addr.s_addr;
 }
