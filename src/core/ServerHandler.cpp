@@ -48,6 +48,10 @@ void ServerHandler::setup() {
     throw std::runtime_error(
         std::string("fcntl(O_NONBLOCK) failed: ") + strerror(errno));
 
+   if (fcntl(fd_, F_SETFD, FD_CLOEXEC) < 0)
+    throw std::runtime_error(
+        std::string("fcntl(FD_CLOEXEC) failed: ") + strerror(errno));
+
   address_.sin_family = AF_INET;
   address_.sin_port = htons(port_);
   address_.sin_addr.s_addr = INADDR_ANY;
@@ -82,6 +86,11 @@ void ServerHandler::onReadReady() {
     }
 
     if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) {
+      std::cerr << "[ERROR] fcntl client fd: " << strerror(errno) << std::endl;
+      close(clientFd);
+      continue;
+    }
+    if (fcntl(clientFd, F_SETFD, FD_CLOEXEC) < 0) {
       std::cerr << "[ERROR] fcntl client fd: " << strerror(errno) << std::endl;
       close(clientFd);
       continue;

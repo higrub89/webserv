@@ -118,7 +118,6 @@ void EpollManager::removeHandler(AEventHandler* handler) {
   int fd = handler->getFd();
   epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL);
   handlers_.erase(fd);
-  delete handler;
 }
 
 // ─── Limpieza de conexiones expiradas ───────────────────────────────────────
