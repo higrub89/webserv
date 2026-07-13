@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "EpollManager.hpp"
+#include "Logger.hpp"
 #include "Router.hpp"
 #include "ServerHandler.hpp"
 #include "types/ConfigStructures.hpp"
@@ -20,10 +21,12 @@ int main(int argc, char* argv[], char* envp[]) {
     return 1;
   }
   (void)argv;
+  Logger::info("WebServer starting...");
+  Logger::debug("Debug mode is enabled.");
 
-  signal(SIGINT, signalHandler);
-  signal(SIGTERM, signalHandler);
-  signal(SIGPIPE, SIG_IGN);
+  signal(SIGINT, signalHandler);   // Ctrl+C
+  signal(SIGTERM, signalHandler);  // kill
+  signal(SIGPIPE, SIG_IGN);        // Evitar crash por broken pipe
 
   try {
     // ── Config stub (TODO: Alex — ConfigParser) ─────────────────────
@@ -46,19 +49,20 @@ int main(int argc, char* argv[], char* envp[]) {
 
     // ── Crear ServerHandler por cada puerto ──────────────────────────
     ServerHandler* server =
-        new ServerHandler(8080, defaultConfig, epoll, router);
+      new ServerHandler(8080, defaultConfig, epoll, router);
     server->setup();
     epoll.addHandler(server, EPOLLIN);
 
     // ── Arrancar event-loop ─────────────────────────────────────────
-    std::cout << "[INFO]  WebServer starting..." << std::endl;
     epoll.run();
-    std::cout << "[INFO]  WebServer shutdown complete" << std::endl;
-
+    Logger::info("WebServer shutdown complete");
   } catch (const std::exception& e) {
-    std::cerr << "Fatal: " << e.what() << std::endl;
+    // TODO
+    // Checkear si es necesario loggear algo, o hacer algo especifico
     return 1;
   }
-
+  (void)argc;
+  (void)argv;
+  (void)envp;
   return 0;
 }

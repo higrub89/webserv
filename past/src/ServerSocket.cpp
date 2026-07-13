@@ -26,8 +26,8 @@
 
 /// ─── Constructor / Destructor ───────────────────────────────────────────────
 
-ServerSocket::ServerSocket(const ServerConfig& config) : config_(config), fd_(-1) {
-  std::memset(&addr_, 0, sizeof(addr_));
+ServerSocket::ServerSocket(const ServerConfig& config) : config_(config),
+fd_(-1) { std::memset(&addr_, 0, sizeof(addr_));
 }
 
 ServerSocket::~ServerSocket() {
@@ -48,8 +48,8 @@ void ServerSocket::init() {
   listenSocket();
 
   std::ostringstream oss;
-  oss << "Listening on " << config_.host << ":" << config_.port << " (fd=" << fd_ << ")";
-  SocketUtils::logInfo(oss.str());
+  oss << "Listening on " << config_.host << ":" << config_.port << " (fd=" <<
+fd_ << ")"; SocketUtils::logInfo(oss.str());
 }
 
 // ─── Aceptar conexión ──────────────────────────────────────────────────────
@@ -92,7 +92,8 @@ const ServerConfig& ServerSocket::getConfig() const { return config_; }
 void ServerSocket::createSocket() {
   fd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (fd_ < 0)
-    throw std::runtime_error(std::string("socket() failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("socket() failed: ") +
+strerror(errno));
 }
 
 void ServerSocket::setSocketOptions() {
@@ -101,12 +102,14 @@ void ServerSocket::setSocketOptions() {
   // SO_REUSEADDR: permite reutilizar el puerto inmediatamente tras reiniciar
   // sin esperar al TIME_WAIT del kernel TCP
   if (setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    throw std::runtime_error(std::string("setsockopt(SO_REUSEADDR) failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("setsockopt(SO_REUSEADDR) failed: ") +
+strerror(errno));
 
   // O_NONBLOCK: crítico para que poll() funcione correctamente.
   // Sin esto, accept()/recv()/send() bloquearían el proceso entero.
   if (fcntl(fd_, F_SETFL, O_NONBLOCK) < 0)
-    throw std::runtime_error(std::string("fcntl(O_NONBLOCK) failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("fcntl(O_NONBLOCK) failed: ") +
+strerror(errno));
 }
 
 void ServerSocket::bindSocket() {
@@ -116,8 +119,8 @@ void ServerSocket::bindSocket() {
 
   if (bind(fd_, (struct sockaddr*)&addr_, sizeof(addr_)) < 0) {
     std::ostringstream oss;
-    oss << "bind() failed on " << config_.host << ":" << config_.port << ": " << strerror(errno);
-    throw std::runtime_error(oss.str());
+    oss << "bind() failed on " << config_.host << ":" << config_.port << ": " <<
+strerror(errno); throw std::runtime_error(oss.str());
   }
 }
 
@@ -125,6 +128,7 @@ void ServerSocket::listenSocket() {
   // SOMAXCONN: máximo de conexiones pendientes en el backlog del kernel.
   // En Linux, suele ser 128 o 4096 según /proc/sys/net/core/somaxconn.
   if (listen(fd_, SOMAXCONN) < 0)
-    throw std::runtime_error(std::string("listen() failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("listen() failed: ") +
+strerror(errno));
 }
 */

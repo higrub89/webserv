@@ -8,6 +8,7 @@
 #include "AEventHandler.hpp"
 
 class EpollManager;
+class ClientHandler;
 
 /**
  * @class CgiWriteHandler
@@ -20,7 +21,8 @@ class EpollManager;
 class CgiWriteHandler : public AEventHandler {
 private:
   EpollManager& epollManager_;
-  std::vector<char> bodyBuffer_;
+  ClientHandler& client_;
+  const std::vector<char>& bodyBuffer_;
   size_t bytesWritten_;
 
 public:
@@ -28,10 +30,11 @@ public:
    * @brief Construct a new CgiWriteHandler.
    * @param stdin_fd The write-end of the pipe connected to CGI stdin.
    * @param epoll_manager Reference to the central EpollManager.
+   * @param client Reference to the ClientHandler waiting for the CGI.
    * @param body The HTTP request body payload to write to the CGI.
    */
   CgiWriteHandler(int stdin_fd, EpollManager& epoll_manager,
-                  const std::vector<char>& body);
+                  ClientHandler& client, const std::vector<char>& body);
   virtual ~CgiWriteHandler();
 
   // Implement AEventHandler interfaces

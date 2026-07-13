@@ -1,8 +1,5 @@
 #include "ServerHandler.hpp"
 
-#include "ClientHandler.hpp"
-#include "EpollManager.hpp"
-
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -14,15 +11,18 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "ClientHandler.hpp"
+#include "EpollManager.hpp"
+
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
 ServerHandler::ServerHandler(int port, const ServerConfig& config,
                              EpollManager& epoll_manager, Router& router)
-    : AEventHandler(-1),
-      config_(config),
-      epollManager_(epoll_manager),
-      router_(router),
-      port_(port) {
+  : AEventHandler(-1),
+    config_(config),
+    epollManager_(epoll_manager),
+    router_(router),
+    port_(port) {
   std::memset(&address_, 0, sizeof(address_));
 }
 
@@ -36,21 +36,21 @@ ServerHandler::~ServerHandler() {
 void ServerHandler::setup() {
   fd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (fd_ < 0)
-    throw std::runtime_error(
-        std::string("socket() failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("socket() failed: ") +
+                             strerror(errno));
 
   int opt = 1;
   if (setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    throw std::runtime_error(
-        std::string("setsockopt(SO_REUSEADDR) failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("setsockopt(SO_REUSEADDR) failed: ") +
+                             strerror(errno));
 
   if (fcntl(fd_, F_SETFL, O_NONBLOCK) < 0)
-    throw std::runtime_error(
-        std::string("fcntl(O_NONBLOCK) failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("fcntl(O_NONBLOCK) failed: ") +
+                             strerror(errno));
 
-   if (fcntl(fd_, F_SETFD, FD_CLOEXEC) < 0)
-    throw std::runtime_error(
-        std::string("fcntl(FD_CLOEXEC) failed: ") + strerror(errno));
+  if (fcntl(fd_, F_SETFD, FD_CLOEXEC) < 0)
+    throw std::runtime_error(std::string("fcntl(FD_CLOEXEC) failed: ") +
+                             strerror(errno));
 
   address_.sin_family = AF_INET;
   address_.sin_port = htons(port_);
@@ -63,11 +63,11 @@ void ServerHandler::setup() {
   }
 
   if (listen(fd_, SOMAXCONN) < 0)
-    throw std::runtime_error(
-        std::string("listen() failed: ") + strerror(errno));
+    throw std::runtime_error(std::string("listen() failed: ") +
+                             strerror(errno));
 
-  std::cout << "[INFO]  Listening on 0.0.0.0:" << port_
-            << " (fd=" << fd_ << ")" << std::endl;
+  std::cout << "[INFO]  Listening on 0.0.0.0:" << port_ << " (fd=" << fd_ << ")"
+            << std::endl;
 }
 
 // ─── Aceptar conexiones (loop hasta EAGAIN) ─────────────────────────────────
@@ -97,12 +97,14 @@ void ServerHandler::onReadReady() {
     }
 
     ClientHandler* client =
-        new ClientHandler(clientFd, epollManager_, router_, port_);
+      new ClientHandler(clientFd, epollManager_, router_, port_,
+                        std::string(inet_ntoa(clientAddr.sin_addr)));
     epollManager_.addHandler(client, EPOLLIN | EPOLLRDHUP);
   }
 }
 
-void ServerHandler::onWriteReady() {}
+void ServerHandler::onWriteReady() {
+}
 
 void ServerHandler::onDisconnect() {
   std::cerr << "[ERROR] Listening socket error on fd=" << fd_ << std::endl;

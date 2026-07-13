@@ -44,8 +44,8 @@ void PollManager::addServer(ServerSocket* server) {
   pollfds_.push_back(pfd);
 
   std::ostringstream oss;
-  oss << "Server registered on fd=" << server->getFd() << " port=" << server->getPort();
-  SocketUtils::logInfo(oss.str());
+  oss << "Server registered on fd=" << server->getFd() << " port=" <<
+server->getPort(); SocketUtils::logInfo(oss.str());
 }
 
 // ─── Event-Loop Principal ──────────────────────────────────────────────────
@@ -132,7 +132,8 @@ void PollManager::handleNewConnection(ServerSocket* server) {
   addFdToPoll(clientFd, POLLIN);
 
   std::ostringstream oss;
-  oss << "New client fd=" << clientFd << " from " << SocketUtils::addrToString(clientAddr)
+  oss << "New client fd=" << clientFd << " from " <<
+SocketUtils::addrToString(clientAddr)
       << " on port " << server->getPort();
   SocketUtils::logInfo(oss.str());
 }
