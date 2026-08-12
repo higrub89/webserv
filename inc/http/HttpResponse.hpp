@@ -18,6 +18,10 @@ private:
   std::map<std::string, std::string> headers_;
   std::vector<char> body_;
 
+  // Response cookies kept out of headers_: a std::map overwrites duplicate
+  // keys and HTTP allows multiple Set-Cookie lines (decision #16).
+  std::vector<std::string> setCookies_;
+
 public:
   HttpResponse();
   ~HttpResponse();
@@ -29,6 +33,12 @@ public:
 
   // Setters
   void setStatusCode(int code, const std::string& phrase);
+
+  /**
+   * @brief Sets the status code resolving the standard reason phrase
+   * automatically (e.g. 404 -> "Not Found").
+   */
+  void setStatusCode(int code);
   void setHeader(const std::string& key, const std::string& value);
   void setBody(const std::vector<char>& body);
   void setBody(const std::string& body);
@@ -51,6 +61,12 @@ public:
    * @return std::vector<char> The formatted byte buffer.
    */
   std::vector<char> serialize() const;
+
+  /**
+   * @brief Returns the standard reason phrase for an HTTP status code
+   * ("codigos precisos"). Unknown codes map to "Unknown".
+   */
+  static const std::string& reasonPhrase(int code);
 };
 
 #endif  // HTTPRESPONSE_HPP_
