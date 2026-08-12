@@ -14,7 +14,12 @@
 class HttpRequest {
 private:
   std::string method_;
+  // Original full URI as received (kept for logging/redirects).
   std::string uri_;
+  // Percent-decoded path, without query string (decision #13).
+  std::string path_;
+  // Raw query string, exactly as received after '?' (decision #13).
+  std::string queryString_;
   std::string version_;
   std::map<std::string, std::string> headers_;
   std::vector<char> body_;
@@ -39,6 +44,8 @@ public:
   // Getters
   const std::string& getMethod() const;
   const std::string& getUri() const;
+  const std::string& getPath() const;
+  const std::string& getQueryString() const;
   const std::string& getVersion() const;
   const std::map<std::string, std::string>& getHeaders() const;
   const std::vector<char>& getBody() const;
@@ -50,6 +57,8 @@ public:
   // Setters and modifiers (primarily used by HttpParser)
   void setMethod(const std::string& method);
   void setUri(const std::string& uri);
+  void setPath(const std::string& path);
+  void setQueryString(const std::string& query);
   void setVersion(const std::string& version);
   void addHeader(const std::string& key, const std::string& value);
   void appendBody(const std::vector<char>& chunk);
