@@ -8,6 +8,7 @@ INC_DIR := inc
 
 INCFLAGS := \
   -I $(INC_DIR) \
+  -I $(INC_DIR)/config \
   -I $(INC_DIR)/core \
   -I $(INC_DIR)/http \
   -I $(INC_DIR)/router \
@@ -21,6 +22,7 @@ OPTFLAGS ?= -O2
 
 SRCS := \
 	$(SRC_DIR)/main.cpp \
+	$(SRC_DIR)/config/ConfigParser.cpp \
 	$(SRC_DIR)/cgi/CgiExecutor.cpp \
 	$(SRC_DIR)/cgi/CgiReadHandler.cpp \
 	$(SRC_DIR)/cgi/CgiWriteHandler.cpp \
