@@ -29,28 +29,28 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res,
     }
   }
 
-  const ServerConfig& server = resolveVirtualHost(host, server_port);
+  const ServerConfig& server = resolveServer(host, server_port);
 
   (void)server;
   (void)client;
   res.setStatusCode(200, "OK");
   res.setHeader("Content-Type", "text/html");
-  res.setBody("<h1>Virtual Host Resolved: " + host + " :)</h1>");
+  res.setBody("<h1>Server Resolved: " + host + " :)</h1>");
 }
 
-const ServerConfig& Router::resolveVirtualHost(const std::string& host,
-                                               int server_port) const {
-  for (std::map<std::string, VirtualHostGroup>::const_iterator it =
+const ServerConfig& Router::resolveServer(const std::string& host,
+                                          int server_port) const {
+  for (std::map<std::string, ServerGroup>::const_iterator it =
          globalConfig_.begin();
        it != globalConfig_.end(); ++it) {
-    const VirtualHostGroup& vhostGroup = it->second;
-    if (vhostGroup.port == server_port) {
+    const ServerGroup& serverGroup = it->second;
+    if (serverGroup.port == server_port) {
       if (host.empty()) {
-        return vhostGroup.servers[0];
+        return serverGroup.servers[0];
       }
       for (std::vector<ServerConfig>::const_iterator serverIt =
-             vhostGroup.servers.begin();
-           serverIt != vhostGroup.servers.end(); ++serverIt) {
+             serverGroup.servers.begin();
+           serverIt != serverGroup.servers.end(); ++serverIt) {
         const ServerConfig& server = *serverIt;
         for (std::vector<std::string>::const_iterator nameIt =
                server.server_names.begin();
@@ -60,16 +60,16 @@ const ServerConfig& Router::resolveVirtualHost(const std::string& host,
           }
         }
       }
-      return vhostGroup.servers[0];
+      return serverGroup.servers[0];
     }
   }
   return globalConfig_.begin()->second.servers[0];
 }
 
-/* TODO
-const RouteConfig& Router::resolveLocation(const std::string& uri,
-                                           const ServerConfig& server) const {
+const LocationConfig& Router::resolveLocation(
+  const std::string& uri, const ServerConfig& server) const {
   (void)uri;
   (void)server;
+  // TODO
+  return server.locations.begin()->second;
 }
-*/

@@ -7,7 +7,7 @@
 
 class ClientHandler;
 
-struct RouteConfig;
+struct LocationConfig;
 
 /**
  * @class IMethodHandler
@@ -26,10 +26,10 @@ public:
    * @param res The HTTP response to be populated.
    * @param client Pointer to the client connection handler, allowing async
    * control (e.g. for CGI).
-   * @param location The resolved RouteConfig for the request URI.
+   * @param location The resolved LocationConfig for the request URI.
    */
   virtual void handle(const HttpRequest& req, HttpResponse& res,
-                      ClientHandler* client, const RouteConfig& location) = 0;
+                      ClientHandler* client, const LocationConfig& location) = 0;
 };
 
 #endif  // IMETHODHANDLER_HPP_

@@ -40,7 +40,7 @@ void CgiMethodHandler::parseUri(CgiRequestContext& ctx) {
 }
 
 bool CgiMethodHandler::resolveAndValidatePaths(CgiRequestContext& ctx,
-                                               const RouteConfig& location) {
+                                               const LocationConfig& location) {
   ctx.script_path = location.root_dir + ctx.script_name;
   std::string ext = Utils::getExtension(ctx.req.getUri());
   ctx.interpreter_path = "";
@@ -272,7 +272,7 @@ std::vector<char*> CgiMethodHandler::buildChildEnv(
 
 void CgiMethodHandler::handle(const HttpRequest& req, HttpResponse& res,
                               ClientHandler* client,
-                              const RouteConfig& location) {
+                              const LocationConfig& location) {
   CgiRequestContext ctx(req, res, client);
 
   parseUri(ctx);

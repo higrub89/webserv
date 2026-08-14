@@ -34,13 +34,13 @@ int main(int argc, char* argv[], char* envp[]) {
     defaultConfig.client_max_body_size = 1048576;
     defaultConfig.server_names.push_back("localhost");
 
-    VirtualHostGroup vhg;
-    vhg.ip = "0.0.0.0";
-    vhg.port = 8080;
-    vhg.servers.push_back(defaultConfig);
+    ServerGroup serverGroup;
+    serverGroup.ip = "0.0.0.0";
+    serverGroup.port = 8080;
+    serverGroup.servers.push_back(defaultConfig);
 
     ConfigMap configMap;
-    configMap["8080"] = vhg;
+    configMap["8080"] = serverGroup;
 
     // ── Crear componentes ───────────────────────────────────────────
     Router router(configMap, envp);

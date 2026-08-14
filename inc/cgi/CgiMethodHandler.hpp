@@ -18,7 +18,7 @@ private:
   // Private helper methods
   void parseUri(CgiRequestContext& ctx);
   bool resolveAndValidatePaths(CgiRequestContext& ctx,
-                               const RouteConfig& location);
+                               const LocationConfig& location);
   bool createPipes(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2]);
   void executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2],
                     char** child_env);
@@ -38,10 +38,10 @@ public:
    * @param res The HTTP response to be populated.
    * @param client Pointer to the client connection handler, allowing async
    * control (e.g. for CGI).
-   * @param location The resolved RouteConfig for the request URI.
+   * @param location The resolved LocationConfig for the request URI.
    */
   void handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client,
-              const RouteConfig& location);
+              const LocationConfig& location);
 };
 
 #endif  // CGIMETHODHANDLER_HPP_

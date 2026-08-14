@@ -22,17 +22,17 @@ private:
   const ConfigMap& globalConfig_;
   std::map<std::string, IMethodHandler*> methodRegistry_;
 
-  // Resolves which virtual host (server block) should handle the request based
-  // on Host header string, and the port.
-  const ServerConfig& resolveVirtualHost(const std::string& host,
-                                         int server_port) const;
+  // Resolves which server block should handle the request based on the Host
+  // header string and port.
+  const ServerConfig& resolveServer(const std::string& host,
+                                    int server_port) const;
 
   char** envp_;
 
   // Matches the request URI to the longest matching location block defined in
   // the server config.
-  const RouteConfig& resolveLocation(const std::string& uri,
-                                     const ServerConfig& server) const;
+  const LocationConfig& resolveLocation(const std::string& uri,
+                                        const ServerConfig& server) const;
 
 public:
   /**
