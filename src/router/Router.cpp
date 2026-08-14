@@ -30,12 +30,24 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res,
   }
 
   const ServerConfig& server = resolveServer(host, server_port);
+  const LocationConfig* location = resolveLocation(req.getPath(), server);
 
-  (void)server;
+  if (location == NULL) {
+    res.reset();
+    res.setStatusCode(404);
+    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Connection", "close");
+    res.setBody("<h1>404 Not Found (No location match)</h1>");
+    client->changeState(ClientHandler::WRITING_RESPONSE);
+    return;
+  }
+
+  // TODO: Add methods and CGI validation / dispatching.
   (void)client;
+
   res.setStatusCode(200, "OK");
   res.setHeader("Content-Type", "text/html");
-  res.setBody("<h1>Server Resolved: " + host + " :)</h1>");
+  res.setBody("<h1>Server: " + host + ", Location matched!</h1>");
 }
 
 const ServerConfig& Router::resolveServer(const std::string& host,
@@ -66,10 +78,21 @@ const ServerConfig& Router::resolveServer(const std::string& host,
   return globalConfig_.begin()->second.servers[0];
 }
 
-const LocationConfig& Router::resolveLocation(
+const LocationConfig* Router::resolveLocation(
   const std::string& uri, const ServerConfig& server) const {
-  (void)uri;
-  (void)server;
-  // TODO
-  return server.locations.begin()->second;
+  const LocationConfig* bestMatch = NULL;
+  size_t bestMatchLength = 0;
+  for (std::map<std::string, LocationConfig>::const_iterator it =
+         server.locations.begin();
+       it != server.locations.end(); ++it) {
+    const std::string& locationPath = it->first;
+    if (locationPath.length() <= uri.length() &&
+        uri.compare(0, locationPath.length(), locationPath) == 0) {
+      if (locationPath.length() > bestMatchLength) {
+        bestMatch = &it->second;
+        bestMatchLength = locationPath.length();
+      }
+    }
+  }
+  return bestMatch;
 }

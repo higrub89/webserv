@@ -30,8 +30,8 @@ private:
   char** envp_;
 
   // Matches the request URI to the longest matching location block defined in
-  // the server config.
-  const LocationConfig& resolveLocation(const std::string& uri,
+  // the server config. (Longest prefix match)
+  const LocationConfig* resolveLocation(const std::string& uri,
                                         const ServerConfig& server) const;
 
 public:
