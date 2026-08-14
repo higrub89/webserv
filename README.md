@@ -203,7 +203,7 @@ inc/
 ### 6. Directorio inc/types/ (Tipados)
 
 #### ConfigStructures.hpp
-* **Estructuras:** `LocationConfig`, `ServerConfig`, `VirtualHostGroup`, `ConfigMap`
+* **Estructuras:** `RouteConfig`, `ServerConfig`, `VirtualHostGroup`, `ConfigMap`
 * **Descripción:** Modelos de configuración del servidor. Soporta mapeo múltiple de CGIs (`cgi_handlers`) y rutas de almacenamiento para subidas de archivos.
 
 ---

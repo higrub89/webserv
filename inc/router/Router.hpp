@@ -23,16 +23,16 @@ private:
   std::map<std::string, IMethodHandler*> methodRegistry_;
 
   // Resolves which virtual host (server block) should handle the request based
-  // on Host header/port.
-  const ServerConfig& resolveVirtualHost(const HttpRequest& req,
+  // on Host header string, and the port.
+  const ServerConfig& resolveVirtualHost(const std::string& host,
                                          int server_port) const;
 
   char** envp_;
 
   // Matches the request URI to the longest matching location block defined in
   // the server config.
-  const LocationConfig& resolveLocation(const std::string& uri,
-                                        const ServerConfig& server) const;
+  const RouteConfig& resolveLocation(const std::string& uri,
+                                     const ServerConfig& server) const;
 
 public:
   /**

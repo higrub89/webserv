@@ -6,12 +6,12 @@
 #include <vector>
 
 /**
- * @struct LocationConfig
+ * @struct RouteConfig
  * @brief Configuration rules for a specific URI route block.
  *
  * Replaces: Location-related configuration structures in Types.hpp
  */
-struct LocationConfig {
+struct RouteConfig {
   std::vector<std::string> allowed_methods;
   std::string root_dir;
   bool autoindex;
@@ -37,7 +37,7 @@ struct ServerConfig {
   std::string root_dir;
   size_t client_max_body_size;
   std::map<int, std::string> error_pages;
-  std::map<std::string, LocationConfig> locations;
+  std::map<std::string, RouteConfig> locations;
 };
 
 /**
