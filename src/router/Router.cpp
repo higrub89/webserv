@@ -1,5 +1,12 @@
 #include "Router.hpp"
 
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+
+#include "Logger.hpp"
+#include "Utils.hpp"
+
 Router::Router(const ConfigMap& config, char** envp)
   : globalConfig_(config), envp_(envp) {
 }
@@ -31,18 +38,50 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res,
 
   const ServerConfig& server = resolveServer(host, server_port);
   const LocationConfig* location = resolveLocation(req.getPath(), server);
-
   if (location == NULL) {
-    res.reset();
-    res.setStatusCode(404);
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("Connection", "close");
-    res.setBody("<h1>404 Not Found (No location match)</h1>");
+    setErrorResponse(res, 404, server);
     client->changeState(ClientHandler::WRITING_RESPONSE);
     return;
   }
 
-  // TODO: Add methods and CGI validation / dispatching.
+  size_t effectiveLimit = server.client_max_body_size;
+  if (location->client_max_body_size > 0) {
+    effectiveLimit = location->client_max_body_size;
+  }
+
+  if (effectiveLimit > 0 && req.getBody().size() > effectiveLimit) {
+    setErrorResponse(res, 413, server);
+    client->changeState(ClientHandler::WRITING_RESPONSE);
+    return;
+  }
+
+  // Allowed methods (location.allowed_methods) check
+  if (!location->allowed_methods.empty()) {
+    if (std::find(location->allowed_methods.begin(),
+                  location->allowed_methods.end(),
+                  req.getMethod()) == location->allowed_methods.end()) {
+      setErrorResponse(res, 405, server);
+      res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
+      client->changeState(ClientHandler::WRITING_RESPONSE);
+      return;
+    }
+  }
+
+  // HTTP Redirect
+  if (!location->return_redirect.empty()) {
+    res.reset();
+    res.setStatusCode(302);
+    res.setHeader("Location", location->return_redirect);
+    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Connection", "close");
+    res.setBody("<h1>302 Found</h1><p>Redirecting to <a href=\"" +
+                location->return_redirect + "\">" + location->return_redirect +
+                "</a>...</p>");
+    client->changeState(ClientHandler::WRITING_RESPONSE);
+    return;
+  }
+
+  // TODO: Add CGI validation, dispatching.
   (void)client;
 
   res.setStatusCode(200, "OK");
@@ -95,4 +134,32 @@ const LocationConfig* Router::resolveLocation(
     }
   }
   return bestMatch;
+}
+
+void Router::setErrorResponse(HttpResponse& res, int errorCode,
+                              const ServerConfig& server) const {
+  res.reset();
+  res.setStatusCode(errorCode);
+  res.setHeader("Content-Type", "text/html");
+  res.setHeader("Connection", "close");
+
+  std::map<int, std::string>::const_iterator it =
+    server.error_pages.find(errorCode);
+  if (it != server.error_pages.end()) {
+    const std::string& errorPagePath = it->second;
+    std::ifstream errorPageFile(errorPagePath.c_str());
+    if (errorPageFile.is_open()) {
+      std::stringstream buffer;
+      buffer << errorPageFile.rdbuf();
+      res.setBody(buffer.str());
+      return;
+    } else {
+      // warning level does not exist yet, using info for now
+      Logger::info("Custom error page not found or unreadable: " +
+                   errorPagePath);
+    }
+  }
+
+  res.setBody("<h1>" + Utils::toString(errorCode) + " " +
+              HttpResponse::reasonPhrase(errorCode) + "</h1>");
 }

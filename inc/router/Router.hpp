@@ -22,17 +22,27 @@ private:
   const ConfigMap& globalConfig_;
   std::map<std::string, IMethodHandler*> methodRegistry_;
 
+  char** envp_;
+
   // Resolves which server block should handle the request based on the Host
   // header string and port.
   const ServerConfig& resolveServer(const std::string& host,
                                     int server_port) const;
 
-  char** envp_;
-
   // Matches the request URI to the longest matching location block defined in
   // the server config. (Longest prefix match)
   const LocationConfig* resolveLocation(const std::string& uri,
                                         const ServerConfig& server) const;
+
+  /**
+   * @brief setErrorResponse sets the response object to the appropriate error
+   * page based on the error code and server configuration.
+   * @param res The response object to set.
+   * @param errorCode The HTTP error code (e.g., 404, 500).
+   * @param server The server configuration to use for error page resolution.
+   */
+  void setErrorResponse(HttpResponse& res, int errorCode,
+                        const ServerConfig& server) const;
 
 public:
   /**

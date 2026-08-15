@@ -16,6 +16,7 @@ struct LocationConfig {
   std::string root_dir;
   bool autoindex;
   std::string index_file;
+  size_t client_max_body_size;  // 0 = inherit from ServerConfig
 
   // Maps CGI extensions (e.g., ".py", ".php") to their respective executable
   // binaries. Resolves: Multi-CGI parallel support bonus requirement.
