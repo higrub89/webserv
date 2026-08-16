@@ -112,8 +112,7 @@ void ClientHandler::onDisconnect() {
 void ClientHandler::processRequest() {
   state_ = PROCESSING;
 
-  // TODO: cuando Router esté implementado, descomentar:
-  // router_.dispatch(request_, response_, this, serverPort_);
+  router_.dispatch(request_, response_, this, serverPort_);
 
   std::string body =
     "<html><body>"

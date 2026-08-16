@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "CgiMethodHandler.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
 
@@ -81,12 +82,25 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res,
     return;
   }
 
-  // TODO: Add CGI validation, dispatching.
-  (void)client;
+  std::string extension = Utils::getExtension(req.getPath());
+  std::map<std::string, std::string>::const_iterator cgiIt =
+    location->cgi_handlers.find(extension);
+  if (cgiIt != location->cgi_handlers.end()) {  // CGI request
+    CgiMethodHandler cgiHandler(envp_);
+    cgiHandler.handle(req, res, client, *location);
+    return;
+  }
 
-  res.setStatusCode(200, "OK");
-  res.setHeader("Content-Type", "text/html");
-  res.setBody("<h1>Server: " + host + ", Location matched!</h1>");
+  // Static Method Dispatch
+  std::map<std::string, IMethodHandler*>::const_iterator methodIt =
+    methodRegistry_.find(req.getMethod());
+  if (methodIt == methodRegistry_.end()) {
+    setErrorResponse(res, 501, server);
+    client->changeState(ClientHandler::WRITING_RESPONSE);
+    return;
+  }
+
+  methodIt->second->handle(req, res, client, *location);
 }
 
 const ServerConfig& Router::resolveServer(const std::string& host,

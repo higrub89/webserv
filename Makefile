@@ -21,6 +21,7 @@ OPTFLAGS ?= -O2
 
 SRCS := \
 	$(SRC_DIR)/main.cpp \
+	$(SRC_DIR)/cgi/CgiMethodHandler.cpp \
 	$(SRC_DIR)/cgi/CgiReadHandler.cpp \
 	$(SRC_DIR)/cgi/CgiWriteHandler.cpp \
 	$(SRC_DIR)/core/AEventHandler.cpp \
