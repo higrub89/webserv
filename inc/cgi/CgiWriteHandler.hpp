@@ -33,8 +33,7 @@ public:
    * @param client Reference to the ClientHandler waiting for the CGI.
    * @param body The HTTP request body payload to write to the CGI.
    */
-  CgiWriteHandler(int stdin_fd, EpollManager& epoll_manager,
-                  ClientHandler& client, const std::vector<char>& body);
+  CgiWriteHandler(int stdin_fd, EpollManager& epoll_manager, ClientHandler& client, const std::vector<char>& body);
   virtual ~CgiWriteHandler();
 
   // Implement AEventHandler interfaces

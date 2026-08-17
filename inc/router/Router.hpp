@@ -26,13 +26,11 @@ private:
 
   // Resolves which server block should handle the request based on the Host
   // header string and port.
-  const ServerConfig& resolveServer(const std::string& host,
-                                    int server_port) const;
+  const ServerConfig& resolveServer(const std::string& host, int server_port) const;
 
   // Matches the request URI to the longest matching location block defined in
   // the server config. (Longest prefix match)
-  const LocationConfig* resolveLocation(const std::string& uri,
-                                        const ServerConfig& server) const;
+  const LocationConfig* resolveLocation(const std::string& uri, const ServerConfig& server) const;
 
   /**
    * @brief setErrorResponse sets the response object to the appropriate error
@@ -41,8 +39,7 @@ private:
    * @param errorCode The HTTP error code (e.g., 404, 500).
    * @param server The server configuration to use for error page resolution.
    */
-  void setErrorResponse(HttpResponse& res, int errorCode,
-                        const ServerConfig& server) const;
+  void setErrorResponse(HttpResponse& res, int errorCode, const ServerConfig& server) const;
 
 public:
   /**
@@ -58,8 +55,7 @@ public:
    * @param method The HTTP method name (e.g., "GET", "POST").
    * @param executor Pointer to the executor instance.
    */
-  void registerMethodExecutor(const std::string& method,
-                              IMethodExecutor* executor);
+  void registerMethodExecutor(const std::string& method, IMethodExecutor* executor);
 
   /**
    * @brief Resolves the target virtual server, checks route rules, and executes
@@ -69,8 +65,7 @@ public:
    * @param client Pointer to the active client connection.
    * @param server_port The physical port on which the request was received.
    */
-  void dispatch(const HttpRequest& req, HttpResponse& res,
-                ClientHandler* client, int server_port);
+  void dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* client, int server_port);
 };
 
 #endif  // ROUTER_HPP_

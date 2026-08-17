@@ -39,8 +39,7 @@ public:
    * @param client Reference to the ClientHandler waiting for the CGI output.
    * @param cgi_pid The process ID of the CGI child process to reap later.
    */
-  CgiReadHandler(int stdout_fd, EpollManager& epoll_manager,
-                 ClientHandler& client, pid_t cgi_pid);
+  CgiReadHandler(int stdout_fd, EpollManager& epoll_manager, ClientHandler& client, pid_t cgi_pid);
   virtual ~CgiReadHandler();
 
   // Implement AEventHandler interfaces

@@ -29,9 +29,7 @@ public:
    * control (e.g. for CGI).
    * @param location The resolved LocationConfig for the request URI.
    */
-  virtual void handle(const HttpRequest& req, HttpResponse& res,
-                      ClientHandler* client,
-                      const LocationConfig& location) = 0;
+  virtual void handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client, const LocationConfig& location) = 0;
 };
 
 #endif  // IMETHODEXECUTOR_HPP_

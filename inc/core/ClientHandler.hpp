@@ -25,12 +25,10 @@ class CgiWriteHandler;
  */
 class ClientHandler : public AEventHandler {
 public:
-  enum ClientState {
-    READING_REQUEST,
-    PROCESSING,
-    WAITING_FOR_CGI,
-    WRITING_RESPONSE
-  };
+  enum ClientState { READING_REQUEST,
+                     PROCESSING,
+                     WAITING_FOR_CGI,
+                     WRITING_RESPONSE };
 
 private:
   EpollManager& epollManager_;
@@ -65,8 +63,7 @@ public:
    * @param server_port The local port this client connected to.
    * @param client_ip The remote IP address of the client.
    */
-  ClientHandler(int fd, EpollManager& epoll_manager, Router& router,
-                int server_port, const std::string& client_ip);
+  ClientHandler(int fd, EpollManager& epoll_manager, Router& router, int server_port, const std::string& client_ip);
   virtual ~ClientHandler();
 
   // Implement AEventHandler interfaces
@@ -74,8 +71,7 @@ public:
                                 // transition to processing when complete.
   virtual void onWriteReady();  // Perform 1 send() call (partial writes safe),
                                 // transition state when complete.
-  virtual void
-  onDisconnect();  // Clean up client resources and trigger socket closure.
+  virtual void onDisconnect();  // Clean up client resources and trigger socket closure.
 
   /**
    * @brief Append response bytes to the output buffer to be sent in the next

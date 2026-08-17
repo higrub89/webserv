@@ -25,8 +25,7 @@ public:
    * @return The starting index of the body (after the delimiter), or
    * std::string::npos if not found.
    */
-  static size_t findHeadersEnd(const std::vector<char>& buffer,
-                               size_t& delimiter_len);
+  static size_t findHeadersEnd(const std::vector<char>& buffer, size_t& delimiter_len);
 
   /**
    * @brief Case-insensitively checks if a line starts with "status:".
@@ -54,8 +53,7 @@ public:
    * delimiter (uses std::ostringstream for conversion).
    */
   template <typename T>
-  static std::string join(const std::vector<T>& elements,
-                          const std::string& delimiter) {
+  static std::string join(const std::vector<T>& elements, const std::string& delimiter) {
     std::ostringstream oss;
     for (size_t i = 0; i < elements.size(); ++i) {
       if (i != 0) {

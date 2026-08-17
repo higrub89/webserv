@@ -19,8 +19,7 @@ struct CgiRequestContext {
   std::string query_string;
   std::string interpreter_path;
 
-  CgiRequestContext(const HttpRequest& r, HttpResponse& s, ClientHandler* c)
-    : req(r), res(s), client(c) {}
+  CgiRequestContext(const HttpRequest& r, HttpResponse& s, ClientHandler* c) : req(r), res(s), client(c) {}
 };
 
 #endif  // CGISTRUCTURES_HPP_

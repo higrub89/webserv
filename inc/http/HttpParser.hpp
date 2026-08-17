@@ -14,17 +14,15 @@
  */
 class HttpParser {
 public:
-  enum ParseState {
-    STATE_REQUEST_LINE,
-    STATE_HEADERS,
-    STATE_BODY_IDENTITY,
-    STATE_BODY_CHUNKED,
-    STATE_CHUNK_HEADER,
-    STATE_CHUNK_DATA,
-    STATE_CHUNK_CRLF,
-    STATE_COMPLETE,
-    STATE_ERROR
-  };
+  enum ParseState { STATE_REQUEST_LINE,
+                    STATE_HEADERS,
+                    STATE_BODY_IDENTITY,
+                    STATE_BODY_CHUNKED,
+                    STATE_CHUNK_HEADER,
+                    STATE_CHUNK_DATA,
+                    STATE_CHUNK_CRLF,
+                    STATE_COMPLETE,
+                    STATE_ERROR };
 
 private:
   ParseState state_;

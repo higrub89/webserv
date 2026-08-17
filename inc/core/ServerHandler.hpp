@@ -31,8 +31,7 @@ public:
    * @param epoll_manager Reference to the event loop manager.
    * @param router Reference to the router for dispatching requests.
    */
-  ServerHandler(int port, const ServerConfig& config,
-                EpollManager& epoll_manager, Router& router);
+  ServerHandler(int port, const ServerConfig& config, EpollManager& epoll_manager, Router& router);
   virtual ~ServerHandler();
 
   /**
@@ -45,8 +44,7 @@ public:
   virtual void onReadReady();   // Accept incoming connection, instantiate
                                 // ClientHandler, and register it in epoll.
   virtual void onWriteReady();  // No-op for listening sockets.
-  virtual void
-  onDisconnect();  // Error handling / recovery for the listening socket.
+  virtual void onDisconnect();  // Error handling / recovery for the listening socket.
 };
 
 #endif  // SERVERHANDLER_HPP_

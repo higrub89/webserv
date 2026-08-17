@@ -51,9 +51,7 @@ public:
    * @param max_age Expiry time in seconds (-1 to ignore).
    * @param http_only Restrict Javascript access (defaults to true).
    */
-  void setCookie(const std::string& key, const std::string& value,
-                 const std::string& path = "/", int max_age = -1,
-                 bool http_only = true);
+  void setCookie(const std::string& key, const std::string& value, const std::string& path = "/", int max_age = -1, bool http_only = true);
 
   /**
    * @brief Serializes the HTTP status line, headers, and body into a raw byte

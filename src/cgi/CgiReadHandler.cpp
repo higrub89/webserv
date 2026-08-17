@@ -9,13 +9,7 @@
 
 #include "Utils.hpp"
 
-CgiReadHandler::CgiReadHandler(int stdout_fd, EpollManager& epoll_manager,
-                               ClientHandler& client, pid_t cgi_pid)
-  : AEventHandler(stdout_fd),
-    epollManager_(epoll_manager),
-    client_(client),
-    cgiPid_(cgi_pid),
-    headersParsed_(false) {
+CgiReadHandler::CgiReadHandler(int stdout_fd, EpollManager& epoll_manager, ClientHandler& client, pid_t cgi_pid) : AEventHandler(stdout_fd), epollManager_(epoll_manager), client_(client), cgiPid_(cgi_pid), headersParsed_(false) {
   readBuffer_.reserve(kMaxHeadersSize);
   epollManager_.addHandler(this, EPOLLIN | EPOLLRDHUP);
 }
@@ -53,11 +47,9 @@ void CgiReadHandler::onReadReady() {
       size_t delimiter_len = 0;
       size_t header_end_idx = Utils::findHeadersEnd(readBuffer_, delimiter_len);
       if (header_end_idx != std::string::npos) {
-        std::string header_str(readBuffer_.begin(),
-                               readBuffer_.begin() + header_end_idx);
+        std::string header_str(readBuffer_.begin(), readBuffer_.begin() + header_end_idx);
         const char* body_ptr = &readBuffer_[header_end_idx + delimiter_len];
-        size_t body_size =
-          readBuffer_.size() - (header_end_idx + delimiter_len);
+        size_t body_size = readBuffer_.size() - (header_end_idx + delimiter_len);
 
         std::string status_line = "HTTP/1.1 200 OK\r\n";
         std::string extra_headers;

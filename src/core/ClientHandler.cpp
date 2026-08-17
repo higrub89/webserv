@@ -20,9 +20,7 @@
 
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
-ClientHandler::ClientHandler(int fd, EpollManager& epoll_manager,
-                             Router& router, int server_port,
-                             const std::string& client_ip)
+ClientHandler::ClientHandler(int fd, EpollManager& epoll_manager, Router& router, int server_port, const std::string& client_ip)
   : AEventHandler(fd),
     epollManager_(epoll_manager),
     router_(router),
@@ -177,8 +175,7 @@ bool ClientHandler::isTimedOut(time_t current_time) const {
 }
 
 // ─── Gestión de CGI ─────────────────────────────────────────────────────────
-void ClientHandler::registerCgi(pid_t pid, CgiReadHandler* read_h,
-                                CgiWriteHandler* write_h) {
+void ClientHandler::registerCgi(pid_t pid, CgiReadHandler* read_h, CgiWriteHandler* write_h) {
   cgiPid_ = pid;
   cgiReadHandler_ = read_h;
   cgiWriteHandler_ = write_h;

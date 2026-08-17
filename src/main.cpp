@@ -48,8 +48,7 @@ int main(int argc, char* argv[], char* envp[]) {
     epoll.init();
 
     // ── Crear ServerHandler por cada puerto ──────────────────────────
-    ServerHandler* server =
-      new ServerHandler(8080, defaultConfig, epoll, router);
+    ServerHandler* server = new ServerHandler(8080, defaultConfig, epoll, router);
     server->setup();
     epoll.addHandler(server, EPOLLIN);
 

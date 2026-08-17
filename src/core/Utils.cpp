@@ -4,8 +4,7 @@
 
 std::string Utils::getExtension(const std::string& uri) {
   size_t question_mark = uri.find('?');
-  std::string path =
-    (question_mark == std::string::npos) ? uri : uri.substr(0, question_mark);
+  std::string path = (question_mark == std::string::npos) ? uri : uri.substr(0, question_mark);
   size_t dot = path.find_last_of('.');
   if (dot != std::string::npos && dot < path.length() - 1) {
     return path.substr(dot);
@@ -13,11 +12,9 @@ std::string Utils::getExtension(const std::string& uri) {
   return "";
 }
 
-size_t Utils::findHeadersEnd(const std::vector<char>& buffer,
-                             size_t& delimiter_len) {
+size_t Utils::findHeadersEnd(const std::vector<char>& buffer, size_t& delimiter_len) {
   for (size_t i = 0; i < buffer.size(); ++i) {
-    if (i + 3 < buffer.size() && buffer[i] == '\r' && buffer[i + 1] == '\n' &&
-        buffer[i + 2] == '\r' && buffer[i + 3] == '\n') {
+    if (i + 3 < buffer.size() && buffer[i] == '\r' && buffer[i + 1] == '\n' && buffer[i + 2] == '\r' && buffer[i + 3] == '\n') {
       delimiter_len = 4;
       return i;
     }

@@ -17,16 +17,12 @@ private:
 
   // Private helper methods
   void parseUri(CgiRequestContext& ctx);
-  bool resolveAndValidatePaths(CgiRequestContext& ctx,
-                               const LocationConfig& location);
+  bool resolveAndValidatePaths(CgiRequestContext& ctx, const LocationConfig& location);
   bool createPipes(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2]);
-  void executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2],
-                    char** child_env);
-  void setupParent(CgiRequestContext& ctx, pid_t pid, int in_pipe[2],
-                   int out_pipe[2]);
+  void executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2], char** child_env);
+  void setupParent(CgiRequestContext& ctx, pid_t pid, int in_pipe[2], int out_pipe[2]);
 
-  std::vector<char*> buildChildEnv(CgiRequestContext& ctx,
-                                   std::vector<std::string>& env_strings);
+  std::vector<char*> buildChildEnv(CgiRequestContext& ctx, std::vector<std::string>& env_strings);
 
 public:
   CgiExecutor(char** envp);
@@ -40,8 +36,7 @@ public:
    * control (e.g. for CGI).
    * @param location The resolved LocationConfig for the request URI.
    */
-  void handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client,
-              const LocationConfig& location);
+  void handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client, const LocationConfig& location);
 };
 
 #endif  // CGIEXECUTOR_HPP_

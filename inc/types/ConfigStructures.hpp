@@ -51,8 +51,7 @@ struct ServerConfig {
 struct ServerGroup {
   std::string ip;
   int port;
-  std::vector<ServerConfig>
-    servers;  // Index 0 represents the default_server for this port.
+  std::vector<ServerConfig> servers;  // Index 0 represents the default_server for this port.
 };
 
 // Type definition mapping "IP:Port" or "Port" string to its ServerGroup.
