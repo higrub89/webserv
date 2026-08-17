@@ -12,11 +12,10 @@ class ClientHandler;
 
 /**
  * @class CgiWriteHandler
- * @brief Monitors the stdin pipe of a CGI child process to feed it the HTTP
- * request body asynchronously.
+ * @brief Monitors the stdin pipe of a CGI child process to feed it the HTTP request body asynchronously.
  *
- * Replaces: None (New helper to satisfy the CGI requirement
- * of webserv)
+ * Inherits from AEventHandler to stream the request payload into the child process's stdin
+ * non-blockingly, unregistering and closing the write pipe once transmission is complete.
  */
 class CgiWriteHandler : public AEventHandler {
 private:
@@ -26,21 +25,12 @@ private:
   size_t bytesWritten_;
 
 public:
-  /**
-   * @brief Construct a new CgiWriteHandler.
-   * @param stdin_fd The write-end of the pipe connected to CGI stdin.
-   * @param epoll_manager Reference to the central EpollManager.
-   * @param client Reference to the ClientHandler waiting for the CGI.
-   * @param body The HTTP request body payload to write to the CGI.
-   */
   CgiWriteHandler(int stdin_fd, EpollManager& epoll_manager, ClientHandler& client, const std::vector<char>& body);
   virtual ~CgiWriteHandler();
 
-  // Implement AEventHandler interfaces
-  virtual void onReadReady();   // No-op.
-  virtual void onWriteReady();  // Writes a chunk of body to CGI, unregisters
-                                // and closes pipe when done.
-  virtual void onDisconnect();  // Cleans up and closes pipe on error.
+  virtual void onReadReady();
+  virtual void onWriteReady();
+  virtual void onDisconnect();
 };
 
 #endif  // CGIWRITEHANDLER_HPP_

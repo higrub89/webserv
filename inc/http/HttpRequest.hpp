@@ -7,41 +7,31 @@
 
 /**
  * @class HttpRequest
- * @brief DTO representing a fully parsed HTTP client request.
+ * @brief Data Transfer Object (DTO) encapsulating a parsed HTTP/1.1 request.
  *
- * Replaces: HTTP request representation in the old codebase.
+ * Stores the HTTP method, original URI, sanitized path, query parameters, protocol version,
+ * header map, payload body bytes, parsed cookies, and connection persistency flags.
  */
 class HttpRequest {
 private:
   std::string method_;
-  // Original full URI as received (kept for logging/redirects).
-  std::string uri_;
-  // Percent-decoded path, without query string (decision #13).
-  std::string path_;
-  // Raw query string, exactly as received after '?' (decision #13).
-  std::string queryString_;
-  std::string version_;
+  std::string uri_;          // Original full URI as received (e.g. for logging/redirects)
+  std::string path_;         // Percent-decoded path without query string
+  std::string queryString_;  // Raw query string after '?'
+  std::string version_;      // HTTP version string (e.g. "HTTP/1.1")
   std::map<std::string, std::string> headers_;
   std::vector<char> body_;
   bool isChunked_;
   size_t contentLength_;
   bool keepAlive_;
-
-  // Parsed cookies map (Key -> Value).
-  // Resolves: Cookie/Session bonus requirement.
   std::map<std::string, std::string> cookies_;
 
 public:
   HttpRequest();
   ~HttpRequest();
 
-  /**
-   * @brief Clears internal fields logically so the object can be recycled under
-   * high load.
-   */
   void reset();
 
-  // Getters
   const std::string& getMethod() const;
   const std::string& getUri() const;
   const std::string& getPath() const;
@@ -54,7 +44,6 @@ public:
   bool isKeepAlive() const;
   const std::map<std::string, std::string>& getCookies() const;
 
-  // Setters and modifiers (primarily used by HttpParser)
   void setMethod(const std::string& method);
   void setUri(const std::string& uri);
   void setPath(const std::string& path);
@@ -67,10 +56,6 @@ public:
   void setContentLength(size_t length);
   void setKeepAlive(bool keep_alive);
 
-  /**
-   * @brief Parses the raw "Cookie" headers inside headers_ map to populate
-   * cookies_.
-   */
   void parseCookies();
 };
 

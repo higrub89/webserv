@@ -56,8 +56,7 @@ int main(int argc, char* argv[], char* envp[]) {
     epoll.run();
     Logger::info("WebServer shutdown complete");
   } catch (const std::exception& e) {
-    // TODO
-    // Checkear si es necesario loggear algo, o hacer algo especifico
+    Logger::error(std::string("Fatal error: ") + e.what());
     return 1;
   }
   (void)argc;
