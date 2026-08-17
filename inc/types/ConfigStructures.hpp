@@ -16,6 +16,7 @@ struct LocationConfig {
   std::string root_dir;
   bool autoindex;
   std::string index_file;
+  size_t client_max_body_size;  // 0 = inherit from ServerConfig
 
   // Maps CGI extensions (e.g., ".py", ".php") to their respective executable
   // binaries. Resolves: Multi-CGI parallel support bonus requirement.
@@ -41,20 +42,20 @@ struct ServerConfig {
 };
 
 /**
- * @struct VirtualHostGroup
- * @brief Groups virtual servers sharing the same physical bind port.
+ * @struct ServerGroup
+ * @brief Groups servers sharing the same physical bind port.
  *
  * Replaces: None (Introduced to prevent EADDRINUSE by allowing one socket bind
  * per port)
  */
-struct VirtualHostGroup {
+struct ServerGroup {
   std::string ip;
   int port;
   std::vector<ServerConfig>
     servers;  // Index 0 represents the default_server for this port.
 };
 
-// Type definition mapping "IP:Port" or "Port" string to its VirtualHostGroup.
-typedef std::map<std::string, VirtualHostGroup> ConfigMap;
+// Type definition mapping "IP:Port" or "Port" string to its ServerGroup.
+typedef std::map<std::string, ServerGroup> ConfigMap;
 
 #endif  // CONFIGSTRUCTURES_HPP_

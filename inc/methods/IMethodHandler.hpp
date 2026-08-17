@@ -29,8 +29,7 @@ public:
    * @param location The resolved LocationConfig for the request URI.
    */
   virtual void handle(const HttpRequest& req, HttpResponse& res,
-                      ClientHandler* client,
-                      const LocationConfig& location) = 0;
+                      ClientHandler* client, const LocationConfig& location) = 0;
 };
 
 #endif  // IMETHODHANDLER_HPP_

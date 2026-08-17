@@ -48,6 +48,23 @@ public:
     oss << val;
     return oss.str();
   }
+
+  /**
+   * @brief Joins a vector of elements into a single string with a specified
+   * delimiter (uses std::ostringstream for conversion).
+   */
+  template <typename T>
+  static std::string join(const std::vector<T>& elements,
+                          const std::string& delimiter) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < elements.size(); ++i) {
+      if (i != 0) {
+        oss << delimiter;
+      }
+      oss << elements[i];
+    }
+    return oss.str();
+  }
 };
 
 #endif  // UTILS_HPP_
