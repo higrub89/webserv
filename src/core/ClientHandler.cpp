@@ -58,10 +58,13 @@ void ClientHandler::onReadReady() {
     if (complete) {
       processRequest();
     } else if (parser_.getState() == HttpParser::STATE_ERROR) {
-      // Error de parseo: construir respuesta de error
-      response_.setStatusCode(parser_.getErrorCode(), "Bad Request");
-      response_.setHeader("Connection", "close");
-      response_.setBody("Bad Request");
+      const std::map<std::string, std::string>& headers = request_.getHeaders();
+      std::map<std::string, std::string>::const_iterator it = headers.find("host");
+      if (it != headers.end()) {
+        router_.setErrorResponse(response_, parser_.getErrorCode(), it->second, serverPort_);
+      } else {
+        router_.setErrorResponse(response_, parser_.getErrorCode(), "", serverPort_);
+      }
       appendToOutput(response_.serialize());
       changeState(WRITING_RESPONSE);
     }
@@ -202,28 +205,13 @@ void ClientHandler::handleCgiError() {
 
   clearCgi();
 
-  // TODO:
-  // Replace this hardcoded default page generation with a centralized error
-  // response builder (e.g., buildErrorResponse(500)). It should look up the
-  // configured ServerConfig error pages (ServerConfig::error_pages) for a
-  // custom 500 error page. If found and readable, use that file's content as
-  // the body; otherwise, fall back to this default HTML page.
-  response_.reset();
-  response_.setStatusCode(500, "Internal Server Error");
-
-  std::string err_body =
-    "<html>\r\n"
-    "<head><title>500 Internal Server Error</title></head>\r\n"
-    "<body>\r\n"
-    "<center><h1>500 Internal Server Error</h1></center>\r\n"
-    "<hr><center>Webserv/1.0</center>\r\n"
-    "</body>\r\n"
-    "</html>\r\n";
-
-  response_.setBody(err_body);
-  response_.setHeader("Content-Type", "text/html");
-  response_.setHeader("Content-Length", Utils::toString(err_body.size()));
-  response_.setHeader("Connection", "close");  // Close connection after error
+  const std::map<std::string, std::string>& headers = request_.getHeaders();
+  std::map<std::string, std::string>::const_iterator it = headers.find("host");
+  if (it != headers.end()) {
+    router_.setErrorResponse(response_, 500, it->second, serverPort_);
+  } else {
+    router_.setErrorResponse(response_, 500, "", serverPort_);
+  }
 
   appendToOutput(response_.serialize());
   changeState(WRITING_RESPONSE);

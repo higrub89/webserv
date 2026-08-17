@@ -21,17 +21,14 @@ void Router::registerMethodExecutor(const std::string& method, IMethodExecutor* 
 }
 
 void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* client, int server_port) {
-  std::string host = "";
+  const ServerConfig* serverPtr = NULL;
   std::map<std::string, std::string>::const_iterator it = req.getHeaders().find("host");
   if (it != req.getHeaders().end()) {
-    host = it->second;
-    size_t colon = host.find(':');
-    if (colon != std::string::npos) {
-      host = host.substr(0, colon);
-    }
+    serverPtr = &resolveServer(it->second, server_port);
+  } else {
+    serverPtr = &resolveServer("", server_port);
   }
-
-  const ServerConfig& server = resolveServer(host, server_port);
+  const ServerConfig& server = *serverPtr;
   const LocationConfig* location = resolveLocation(req.getPath(), server);
   if (location == NULL) {
     setErrorResponse(res, 404, server);
@@ -60,28 +57,31 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     }
   }
 
-  // HTTP Redirect
+  // HTTP Redirection (location.return_redirect)
   if (!location->return_redirect.empty()) {
     res.reset();
-    res.setStatusCode(302);
+    res.setStatusCode(302, "Found");
     res.setHeader("Location", location->return_redirect);
-    res.setHeader("Content-Type", "text/html");
     res.setHeader("Connection", "close");
-    res.setBody("<h1>302 Found</h1><p>Redirecting to <a href=\"" + location->return_redirect + "\">" + location->return_redirect + "</a>...</p>");
+    res.setBody("");
     client->changeState(ClientHandler::WRITING_RESPONSE);
     return;
   }
 
-  std::string extension = Utils::getExtension(req.getPath());
-  std::map<std::string, std::string>::const_iterator cgiIt = location->cgi_handlers.find(extension);
-  if (cgiIt != location->cgi_handlers.end()) {  // CGI request
-    CgiExecutor cgiExecutor(envp_);
-    cgiExecutor.handle(req, res, client, *location);
-    return;
+  // Check if extension matches a configured CGI handler
+  std::string ext = Utils::getExtension(req.getPath());
+  if (!ext.empty()) {
+    std::map<std::string, std::string>::const_iterator cgiIt = location->cgi_handlers.find(ext);
+    if (cgiIt != location->cgi_handlers.end()) {
+      std::map<std::string, IMethodExecutor*>::iterator executorIt = methodRegistry_.find("CGI");
+      if (executorIt != methodRegistry_.end()) {
+        executorIt->second->handle(req, res, client, *location);
+        return;
+      }
+    }
   }
 
-  // Static Method Dispatch
-  std::map<std::string, IMethodExecutor*>::const_iterator methodIt = methodRegistry_.find(req.getMethod());
+  std::map<std::string, IMethodExecutor*>::iterator methodIt = methodRegistry_.find(req.getMethod());
   if (methodIt == methodRegistry_.end()) {
     setErrorResponse(res, 501, server);
     client->changeState(ClientHandler::WRITING_RESPONSE);
@@ -92,16 +92,22 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
 }
 
 const ServerConfig& Router::resolveServer(const std::string& host, int server_port) const {
+  size_t hostLen = host.length();
+  size_t colon = host.find(':');
+  if (colon != std::string::npos) {
+    hostLen = colon;
+  }
+
   for (std::map<std::string, ServerGroup>::const_iterator it = globalConfig_.begin(); it != globalConfig_.end(); ++it) {
     const ServerGroup& serverGroup = it->second;
     if (serverGroup.port == server_port) {
-      if (host.empty()) {
+      if (hostLen == 0) {
         return serverGroup.servers[0];
       }
       for (std::vector<ServerConfig>::const_iterator serverIt = serverGroup.servers.begin(); serverIt != serverGroup.servers.end(); ++serverIt) {
         const ServerConfig& server = *serverIt;
         for (std::vector<std::string>::const_iterator nameIt = server.server_names.begin(); nameIt != server.server_names.end(); ++nameIt) {
-          if (*nameIt == host) {
+          if (nameIt->length() == hostLen && host.compare(0, hostLen, *nameIt) == 0) {
             return server;
           }
         }
@@ -149,4 +155,9 @@ void Router::setErrorResponse(HttpResponse& res, int errorCode, const ServerConf
   }
 
   res.setBody("<h1>" + Utils::toString(errorCode) + " " + HttpResponse::reasonPhrase(errorCode) + "</h1>");
+}
+
+void Router::setErrorResponse(HttpResponse& res, int errorCode, const std::string& host, int server_port) const {
+  const ServerConfig& server = resolveServer(host, server_port);
+  setErrorResponse(res, errorCode, server);
 }

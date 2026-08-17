@@ -54,6 +54,7 @@ public:
 
   void registerMethodExecutor(const std::string& method, IMethodExecutor* executor);
   void dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* client, int server_port);
+  void setErrorResponse(HttpResponse& res, int errorCode, const std::string& host, int server_port) const;
 };
 
 #endif  // ROUTER_HPP_
