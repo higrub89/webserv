@@ -15,7 +15,7 @@ class ClientHandler;
  * @brief Monitors the stdin pipe of a CGI child process to feed it the HTTP
  * request body asynchronously.
  *
- * Replaces: None (New helper to satisfy the strict non-blocking CGI requirement
+ * Replaces: None (New helper to satisfy the CGI requirement
  * of webserv)
  */
 class CgiWriteHandler : public AEventHandler {

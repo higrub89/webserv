@@ -7,7 +7,7 @@
 #include "ClientHandler.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "IMethodHandler.hpp"
+#include "IMethodExecutor.hpp"
 #include "types/ConfigStructures.hpp"
 
 /**
@@ -20,7 +20,7 @@
 class Router {
 private:
   const ConfigMap& globalConfig_;
-  std::map<std::string, IMethodHandler*> methodRegistry_;
+  std::map<std::string, IMethodExecutor*> methodRegistry_;
 
   char** envp_;
 
@@ -54,12 +54,12 @@ public:
   ~Router();
 
   /**
-   * @brief Registers an HTTP method handler in the router registry.
+   * @brief Registers an HTTP method executor in the router registry.
    * @param method The HTTP method name (e.g., "GET", "POST").
-   * @param handler Pointer to the handler instance.
+   * @param executor Pointer to the executor instance.
    */
-  void registerMethodHandler(const std::string& method,
-                             IMethodHandler* handler);
+  void registerMethodExecutor(const std::string& method,
+                              IMethodExecutor* executor);
 
   /**
    * @brief Resolves the target virtual server, checks route rules, and executes

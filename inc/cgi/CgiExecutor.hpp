@@ -1,5 +1,5 @@
-#ifndef CGIMETHODHANDLER_HPP_
-#define CGIMETHODHANDLER_HPP_
+#ifndef CGIEXECUTOR_HPP_
+#define CGIEXECUTOR_HPP_
 
 #include <sys/types.h>
 
@@ -8,9 +8,9 @@
 
 #include "CgiStructures.hpp"
 #include "ConfigStructures.hpp"
-#include "IMethodHandler.hpp"
+#include "IMethodExecutor.hpp"
 
-class CgiMethodHandler : public IMethodHandler {
+class CgiExecutor : public IMethodExecutor {
 public:
 private:
   char** envp_;
@@ -29,8 +29,8 @@ private:
                                    std::vector<std::string>& env_strings);
 
 public:
-  CgiMethodHandler(char** envp);
-  virtual ~CgiMethodHandler();
+  CgiExecutor(char** envp);
+  virtual ~CgiExecutor();
 
   /**
    * @brief Handle the request and build the response.
@@ -44,4 +44,4 @@ public:
               const LocationConfig& location);
 };
 
-#endif  // CGIMETHODHANDLER_HPP_
+#endif  // CGIEXECUTOR_HPP_

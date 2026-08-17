@@ -4,7 +4,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "CgiMethodHandler.hpp"
+#include "CgiExecutor.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
 
@@ -13,15 +13,15 @@ Router::Router(const ConfigMap& config, char** envp)
 }
 
 Router::~Router() {
-  for (std::map<std::string, IMethodHandler*>::iterator it =
+  for (std::map<std::string, IMethodExecutor*>::iterator it =
          methodRegistry_.begin();
        it != methodRegistry_.end(); ++it)
     delete it->second;
 }
 
-void Router::registerMethodHandler(const std::string& method,
-                                   IMethodHandler* handler) {
-  methodRegistry_[method] = handler;
+void Router::registerMethodExecutor(const std::string& method,
+                                    IMethodExecutor* executor) {
+  methodRegistry_[method] = executor;
 }
 
 void Router::dispatch(const HttpRequest& req, HttpResponse& res,
@@ -86,13 +86,13 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res,
   std::map<std::string, std::string>::const_iterator cgiIt =
     location->cgi_handlers.find(extension);
   if (cgiIt != location->cgi_handlers.end()) {  // CGI request
-    CgiMethodHandler cgiHandler(envp_);
-    cgiHandler.handle(req, res, client, *location);
+    CgiExecutor cgiExecutor(envp_);
+    cgiExecutor.handle(req, res, client, *location);
     return;
   }
 
   // Static Method Dispatch
-  std::map<std::string, IMethodHandler*>::const_iterator methodIt =
+  std::map<std::string, IMethodExecutor*>::const_iterator methodIt =
     methodRegistry_.find(req.getMethod());
   if (methodIt == methodRegistry_.end()) {
     setErrorResponse(res, 501, server);

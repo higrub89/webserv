@@ -1,4 +1,4 @@
-#include "CgiMethodHandler.hpp"
+#include "CgiExecutor.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -22,13 +22,13 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 
-CgiMethodHandler::CgiMethodHandler(char** envp) : envp_(envp) {
+CgiExecutor::CgiExecutor(char** envp) : envp_(envp) {
 }
 
-CgiMethodHandler::~CgiMethodHandler() {
+CgiExecutor::~CgiExecutor() {
 }
 
-void CgiMethodHandler::parseUri(CgiRequestContext& ctx) {
+void CgiExecutor::parseUri(CgiRequestContext& ctx) {
   std::string uri = ctx.req.getUri();
   ctx.script_name = uri;
   ctx.query_string = "";
@@ -39,8 +39,8 @@ void CgiMethodHandler::parseUri(CgiRequestContext& ctx) {
   }
 }
 
-bool CgiMethodHandler::resolveAndValidatePaths(CgiRequestContext& ctx,
-                                               const LocationConfig& location) {
+bool CgiExecutor::resolveAndValidatePaths(CgiRequestContext& ctx,
+                                          const LocationConfig& location) {
   ctx.script_path = location.root_dir + ctx.script_name;
   std::string ext = Utils::getExtension(ctx.req.getUri());
   ctx.interpreter_path = "";
@@ -84,8 +84,8 @@ bool CgiMethodHandler::resolveAndValidatePaths(CgiRequestContext& ctx,
   return true;
 }
 
-bool CgiMethodHandler::createPipes(CgiRequestContext& ctx, int in_pipe[2],
-                                   int out_pipe[2]) {
+bool CgiExecutor::createPipes(CgiRequestContext& ctx, int in_pipe[2],
+                              int out_pipe[2]) {
   if (pipe(in_pipe) == -1) {
     Logger::error("CGI stdin pipe() failed: " + std::string(strerror(errno)));
     ctx.res.setStatusCode(500, "Internal Server Error");
@@ -103,8 +103,8 @@ bool CgiMethodHandler::createPipes(CgiRequestContext& ctx, int in_pipe[2],
   return true;
 }
 
-void CgiMethodHandler::executeChild(CgiRequestContext& ctx, int in_pipe[2],
-                                    int out_pipe[2], char** child_env) {
+void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2],
+                               int out_pipe[2], char** child_env) {
   close(in_pipe[1]);
   close(out_pipe[0]);
   if (dup2(in_pipe[0], STDIN_FILENO) == -1) {
@@ -142,8 +142,8 @@ void CgiMethodHandler::executeChild(CgiRequestContext& ctx, int in_pipe[2],
   std::exit(127);
 }
 
-void CgiMethodHandler::setupParent(CgiRequestContext& ctx, pid_t pid,
-                                   int in_pipe[2], int out_pipe[2]) {
+void CgiExecutor::setupParent(CgiRequestContext& ctx, pid_t pid, int in_pipe[2],
+                              int out_pipe[2]) {
   close(in_pipe[0]);
   close(out_pipe[1]);
 
@@ -183,7 +183,7 @@ void CgiMethodHandler::setupParent(CgiRequestContext& ctx, pid_t pid,
   }
 }
 
-std::vector<char*> CgiMethodHandler::buildChildEnv(
+std::vector<char*> CgiExecutor::buildChildEnv(
   CgiRequestContext& ctx, std::vector<std::string>& env_strings) {
   const std::map<std::string, std::string>& headers = ctx.req.getHeaders();
   env_strings.reserve(10 + headers.size());  // 10 static env vars + headers
@@ -270,9 +270,9 @@ std::vector<char*> CgiMethodHandler::buildChildEnv(
   return child_env;
 }
 
-void CgiMethodHandler::handle(const HttpRequest& req, HttpResponse& res,
-                              ClientHandler* client,
-                              const LocationConfig& location) {
+void CgiExecutor::handle(const HttpRequest& req, HttpResponse& res,
+                         ClientHandler* client,
+                         const LocationConfig& location) {
   CgiRequestContext ctx(req, res, client);
 
   parseUri(ctx);

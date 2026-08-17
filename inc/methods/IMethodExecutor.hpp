@@ -1,5 +1,5 @@
-#ifndef IMETHODHANDLER_HPP_
-#define IMETHODHANDLER_HPP_
+#ifndef IMETHODEXECUTOR_HPP_
+#define IMETHODEXECUTOR_HPP_
 
 #include "ConfigStructures.hpp"
 #include "HttpRequest.hpp"
@@ -10,15 +10,16 @@ class ClientHandler;
 struct LocationConfig;
 
 /**
- * @class IMethodHandler
- * @brief Strategy interface for handling HTTP methods (GET, POST, DELETE).
+ * @class IMethodExecutor
+ * @brief Strategy interface for executing HTTP methods (GET, POST, DELETE,
+ * CGI).
  *
  * Replaces: Complex if-else blocks checking request methods in the old handler.
  */
-class IMethodHandler {
+class IMethodExecutor {
 public:
-  IMethodHandler() {}
-  virtual ~IMethodHandler() {}
+  IMethodExecutor() {}
+  virtual ~IMethodExecutor() {}
 
   /**
    * @brief Handle the request and build the response.
@@ -29,7 +30,8 @@ public:
    * @param location The resolved LocationConfig for the request URI.
    */
   virtual void handle(const HttpRequest& req, HttpResponse& res,
-                      ClientHandler* client, const LocationConfig& location) = 0;
+                      ClientHandler* client,
+                      const LocationConfig& location) = 0;
 };
 
-#endif  // IMETHODHANDLER_HPP_
+#endif  // IMETHODEXECUTOR_HPP_
