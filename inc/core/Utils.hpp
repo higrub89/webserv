@@ -5,42 +5,48 @@
 #include <string>
 #include <vector>
 
+/**
+ * @class Utils
+ * @brief Static utility functions for URI manipulation, string formatting, header parsing, and CGI conversions.
+ */
 class Utils {
 private:
   Utils();  // Non-instantiable
 
 public:
   /**
-   * @brief Extracts the file extension (e.g., ".py") from a URI, ignoring query
-   * parameters.
+   * @brief Extracts the file extension (e.g., ".py") from a URI, ignoring query parameters.
+   * @param uri The URI or path string to inspect.
+   * @return Extracted extension including the dot, or empty string if none found.
    */
   static std::string getExtension(const std::string& uri);
 
   /**
-   * @brief Finds the end of headers (delimited by \r\n\r\n or \n\n) in a
-   * character buffer.
+   * @brief Finds the end of HTTP headers (delimited by \r\n\r\n or \n\n) in a character buffer.
    * @param buffer The buffer to search.
-   * @param delimiter_len Output parameter receiving the length of the delimiter
-   * found (2 or 4).
-   * @return The starting index of the body (after the delimiter), or
-   * std::string::npos if not found.
+   * @param delimiter_len Output parameter receiving the length of the delimiter found (2 or 4).
+   * @return The starting index of the delimiter in buffer, or std::string::npos if not found.
    */
-  static size_t findHeadersEnd(const std::vector<char>& buffer,
-                               size_t& delimiter_len);
+  static size_t findHeadersEnd(const std::vector<char>& buffer, size_t& delimiter_len);
 
   /**
    * @brief Case-insensitively checks if a line starts with "status:".
+   * @param line The header line to check.
+   * @return true if line begins with "status:", false otherwise.
    */
   static bool startsWithStatus(const std::string& line);
 
   /**
-   * @brief Converts an HTTP header key (e.g., "Accept-Language") to the CGI
-   * environment variable format (e.g., "ACCEPT_LANGUAGE").
+   * @brief Converts an HTTP header key (e.g., "Accept-Language") to the CGI environment variable format (e.g., "ACCEPT_LANGUAGE").
+   * @param key The HTTP header field name.
+   * @return Formatted environment variable name in uppercase with hyphens converted to underscores.
    */
   static std::string toHeaderEnvKey(const std::string& key);
 
   /**
-   * @brief Converts any streamable value to std::string.
+   * @brief Converts any streamable value to std::string (C++98 alternative to std::to_string).
+   * @param val The value to convert.
+   * @return The string representation of val.
    */
   template <typename T>
   static std::string toString(const T& val) {
@@ -50,12 +56,13 @@ public:
   }
 
   /**
-   * @brief Joins a vector of elements into a single string with a specified
-   * delimiter (uses std::ostringstream for conversion).
+   * @brief Joins a vector of elements into a single string with a specified delimiter.
+   * @param elements Vector of elements to join.
+   * @param delimiter Separator string between elements.
+   * @return Joined string.
    */
   template <typename T>
-  static std::string join(const std::vector<T>& elements,
-                          const std::string& delimiter) {
+  static std::string join(const std::vector<T>& elements, const std::string& delimiter) {
     std::ostringstream oss;
     for (size_t i = 0; i < elements.size(); ++i) {
       if (i != 0) {

@@ -1,4 +1,4 @@
-#include "CgiMethodHandler.hpp"
+#include "CgiExecutor.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -22,13 +22,13 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 
-CgiMethodHandler::CgiMethodHandler(char** envp) : envp_(envp) {
+CgiExecutor::CgiExecutor(char** envp) : envp_(envp) {
 }
 
-CgiMethodHandler::~CgiMethodHandler() {
+CgiExecutor::~CgiExecutor() {
 }
 
-void CgiMethodHandler::parseUri(CgiRequestContext& ctx) {
+void CgiExecutor::parseUri(CgiRequestContext& ctx) {
   std::string uri = ctx.req.getUri();
   ctx.script_name = uri;
   ctx.query_string = "";
@@ -39,21 +39,18 @@ void CgiMethodHandler::parseUri(CgiRequestContext& ctx) {
   }
 }
 
-bool CgiMethodHandler::resolveAndValidatePaths(CgiRequestContext& ctx,
-                                               const LocationConfig& location) {
+bool CgiExecutor::resolveAndValidatePaths(CgiRequestContext& ctx, const LocationConfig& location) {
   ctx.script_path = location.root_dir + ctx.script_name;
   std::string ext = Utils::getExtension(ctx.req.getUri());
   ctx.interpreter_path = "";
 
-  std::map<std::string, std::string>::const_iterator it_cgi =
-    location.cgi_handlers.find(ext);
+  std::map<std::string, std::string>::const_iterator it_cgi = location.cgi_handlers.find(ext);
   if (it_cgi != location.cgi_handlers.end()) {
     ctx.interpreter_path = it_cgi->second;
   }
 
   if (ctx.interpreter_path.empty()) {
-    Logger::error("CGI extension not supported or no interpreter mapped for: " +
-                  ext);
+    Logger::error("CGI extension not supported or no interpreter mapped for: " + ext);
     ctx.res.setStatusCode(500, "Internal Server Error");
     ctx.client->changeState(ClientHandler::WRITING_RESPONSE);
     return false;
@@ -67,8 +64,7 @@ bool CgiMethodHandler::resolveAndValidatePaths(CgiRequestContext& ctx,
   }
 
   if (access(ctx.interpreter_path.c_str(), X_OK) == -1) {
-    Logger::error("CGI interpreter not executable or not found: " +
-                  ctx.interpreter_path);
+    Logger::error("CGI interpreter not executable or not found: " + ctx.interpreter_path);
     ctx.res.setStatusCode(500, "Internal Server Error");
     ctx.client->changeState(ClientHandler::WRITING_RESPONSE);
     return false;
@@ -84,8 +80,7 @@ bool CgiMethodHandler::resolveAndValidatePaths(CgiRequestContext& ctx,
   return true;
 }
 
-bool CgiMethodHandler::createPipes(CgiRequestContext& ctx, int in_pipe[2],
-                                   int out_pipe[2]) {
+bool CgiExecutor::createPipes(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2]) {
   if (pipe(in_pipe) == -1) {
     Logger::error("CGI stdin pipe() failed: " + std::string(strerror(errno)));
     ctx.res.setStatusCode(500, "Internal Server Error");
@@ -103,8 +98,7 @@ bool CgiMethodHandler::createPipes(CgiRequestContext& ctx, int in_pipe[2],
   return true;
 }
 
-void CgiMethodHandler::executeChild(CgiRequestContext& ctx, int in_pipe[2],
-                                    int out_pipe[2], char** child_env) {
+void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_pipe[2], char** child_env) {
   close(in_pipe[1]);
   close(out_pipe[0]);
   if (dup2(in_pipe[0], STDIN_FILENO) == -1) {
@@ -142,8 +136,7 @@ void CgiMethodHandler::executeChild(CgiRequestContext& ctx, int in_pipe[2],
   std::exit(127);
 }
 
-void CgiMethodHandler::setupParent(CgiRequestContext& ctx, pid_t pid,
-                                   int in_pipe[2], int out_pipe[2]) {
+void CgiExecutor::setupParent(CgiRequestContext& ctx, pid_t pid, int in_pipe[2], int out_pipe[2]) {
   close(in_pipe[0]);
   close(out_pipe[1]);
 
@@ -153,13 +146,10 @@ void CgiMethodHandler::setupParent(CgiRequestContext& ctx, pid_t pid,
   CgiReadHandler* read_handler = NULL;
   CgiWriteHandler* write_handler = NULL;
   try {
-    read_handler = new CgiReadHandler(
-      out_pipe[0], ctx.client->getEpollManager(), *ctx.client, pid);
+    read_handler = new CgiReadHandler(out_pipe[0], ctx.client->getEpollManager(), *ctx.client, pid);
     out_pipe[0] = -1;
     if (!ctx.req.getBody().empty()) {
-      write_handler =
-        new CgiWriteHandler(in_pipe[1], ctx.client->getEpollManager(),
-                            *ctx.client, ctx.req.getBody());
+      write_handler = new CgiWriteHandler(in_pipe[1], ctx.client->getEpollManager(), *ctx.client, ctx.req.getBody());
       in_pipe[1] = -1;
     } else {
       close(in_pipe[1]);
@@ -183,8 +173,7 @@ void CgiMethodHandler::setupParent(CgiRequestContext& ctx, pid_t pid,
   }
 }
 
-std::vector<char*> CgiMethodHandler::buildChildEnv(
-  CgiRequestContext& ctx, std::vector<std::string>& env_strings) {
+std::vector<char*> CgiExecutor::buildChildEnv(CgiRequestContext& ctx, std::vector<std::string>& env_strings) {
   const std::map<std::string, std::string>& headers = ctx.req.getHeaders();
   env_strings.reserve(10 + headers.size());  // 10 static env vars + headers
 
@@ -199,9 +188,7 @@ std::vector<char*> CgiMethodHandler::buildChildEnv(
   std::string content_type = "";
 
   // Single pass to collect headers and optimize lookups
-  for (std::map<std::string, std::string>::const_iterator it_h =
-         headers.begin();
-       it_h != headers.end(); ++it_h) {
+  for (std::map<std::string, std::string>::const_iterator it_h = headers.begin(); it_h != headers.end(); ++it_h) {
     const std::string& key = it_h->first;
     const std::string& value = it_h->second;
 
@@ -223,8 +210,7 @@ std::vector<char*> CgiMethodHandler::buildChildEnv(
 
   env_strings.push_back("SERVER_NAME=" + server_name);
   env_strings.push_back("REMOTE_ADDR=" + ctx.client->getClientIp());
-  env_strings.push_back("SERVER_PORT=" +
-                        Utils::toString(ctx.client->getServerPort()));
+  env_strings.push_back("SERVER_PORT=" + Utils::toString(ctx.client->getServerPort()));
 
   if (content_length.empty() && !ctx.req.getBody().empty()) {
     content_length = Utils::toString(ctx.req.getBody().size());
@@ -245,8 +231,7 @@ std::vector<char*> CgiMethodHandler::buildChildEnv(
   }
 
   size_t static_constants_size = 4;
-  size_t total_size =
-    system_env_size + static_constants_size + env_strings.size();
+  size_t total_size = system_env_size + static_constants_size + env_strings.size();
 
   std::vector<char*> child_env;
   child_env.reserve(total_size + 1);
@@ -270,9 +255,7 @@ std::vector<char*> CgiMethodHandler::buildChildEnv(
   return child_env;
 }
 
-void CgiMethodHandler::handle(const HttpRequest& req, HttpResponse& res,
-                              ClientHandler* client,
-                              const LocationConfig& location) {
+void CgiExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client, const LocationConfig& location) {
   CgiRequestContext ctx(req, res, client);
 
   parseUri(ctx);

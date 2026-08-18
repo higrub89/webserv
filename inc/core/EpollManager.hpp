@@ -12,10 +12,10 @@
 
 /**
  * @class EpollManager
- * @brief Manages the epoll event loop and dispatches events to registered
- * handlers.
+ * @brief Manages the central Linux epoll event loop and dispatches I/O notifications.
  *
- * Replaces: PollManager.hpp
+ * Maintains a registry of active AEventHandler pointers mapped by file descriptor,
+ * invokes their callbacks upon epoll_wait events, and periodically cleans up timed-out connections.
  */
 class EpollManager {
 private:
@@ -26,47 +26,21 @@ private:
   // Map tracking active handlers (fd -> AEventHandler*).
   std::map<int, AEventHandler*> handlers_;
 
-  // Sweeps monitored handlers to close connections that have timed out
+  /**
+   * @brief Sweeps monitored handlers to detect and close connections that exceeded idle timeouts.
+   */
   void cleanupTimeouts();
 
 public:
   EpollManager();
   ~EpollManager();
 
-  /**
-   * @brief Creates the epoll instance.
-   */
   void init();
-
-  /**
-   * @brief Runs the main loop, blocking on epoll_wait and dispatching events.
-   */
   void run();
-
-  /**
-   * @brief Signals the event loop to stop running.
-   */
   void stop();
 
-  /**
-   * @brief Registers a handler in epoll.
-   * @param handler The handler to register.
-   * @param events The epoll events bitmask (e.g., EPOLLIN, EPOLLOUT,
-   * EPOLLRDHUP).
-   */
   void addHandler(AEventHandler* handler, uint32_t events);
-
-  /**
-   * @brief Modifies the registered events for a handler.
-   * @param handler The handler to modify.
-   * @param events The new epoll events bitmask.
-   */
   void updateHandlerEvents(AEventHandler* handler, uint32_t events);
-
-  /**
-   * @brief Removes a handler from epoll monitoring.
-   * @param handler The handler to remove.
-   */
   void removeHandler(AEventHandler* handler);
 };
 

@@ -5,54 +5,25 @@
 
 /**
  * @class AEventHandler
- * @brief Abstract base class representing any file descriptor monitored by the
- * EpollManager.
+ * @brief Abstract base class representing any file descriptor monitored by the EpollManager.
  *
- * Replaces: IEventHandler.hpp (or direct raw socket management in old codebase)
+ * Provides a polymorphic interface for epoll event dispatching across different I/O components
+ * (listening server sockets, connected client sockets, and CGI pipes).
  */
 class AEventHandler {
 protected:
   int fd_;
 
 public:
-  /**
-   * @brief Construct a new AEventHandler object.
-   * @param fd The file descriptor to monitor.
-   */
   AEventHandler(int fd);
-
-  /**
-   * @brief Virtual destructor to ensure proper cleanup of derived classes.
-   */
   virtual ~AEventHandler();
 
-  /**
-   * @brief Get the managed file descriptor.
-   * @return int The file descriptor.
-   */
   int getFd() const;
 
-  /**
-   * @brief Called when the file descriptor has data available to read
-   * (EPOLLIN).
-   */
   virtual void onReadReady() = 0;
-
-  /**
-   * @brief Called when the file descriptor is ready for writing without
-   * blocking (EPOLLOUT).
-   */
   virtual void onWriteReady() = 0;
-
-  /**
-   * @brief Called when a disconnection, error, or hang-up occurs (EPOLLERR |
-   * EPOLLHUP | EPOLLRDHUP).
-   */
   virtual void onDisconnect() = 0;
 
-  /**
-   * @brief Check if the handler has timed out. Defaults to false.
-   */
   virtual bool isTimedOut(time_t current_time) const;
 };
 

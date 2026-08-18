@@ -21,8 +21,10 @@ bool equalsIgnoreCase(const std::string& a, const std::string& b) {
 }
 }  // namespace
 
-HttpResponse::HttpResponse() : statusCode_(200), statusPhrase_("OK") {}
-HttpResponse::~HttpResponse() {}
+HttpResponse::HttpResponse() : statusCode_(200), statusPhrase_("OK") {
+}
+HttpResponse::~HttpResponse() {
+}
 
 void HttpResponse::reset() {
   statusCode_ = 200;
@@ -46,15 +48,15 @@ void HttpResponse::setHeader(const std::string& key, const std::string& value) {
   headers_[key] = value;
 }
 
-void HttpResponse::setBody(const std::vector<char>& body) { body_ = body; }
+void HttpResponse::setBody(const std::vector<char>& body) {
+  body_ = body;
+}
 
 void HttpResponse::setBody(const std::string& body) {
   body_.assign(body.begin(), body.end());
 }
 
-void HttpResponse::setCookie(const std::string& key, const std::string& value,
-                             const std::string& path, int max_age,
-                             bool http_only) {
+void HttpResponse::setCookie(const std::string& key, const std::string& value, const std::string& path, int max_age, bool http_only) {
   std::ostringstream cookie;
   cookie << key << "=" << value << "; Path=" << path;
   if (max_age >= 0)
@@ -67,16 +69,13 @@ void HttpResponse::setCookie(const std::string& key, const std::string& value,
 std::vector<char> HttpResponse::serialize() const {
   std::ostringstream oss;
   oss << "HTTP/1.1 " << statusCode_ << " " << statusPhrase_ << "\r\n";
-  for (std::map<std::string, std::string>::const_iterator it =
-           headers_.begin();
-       it != headers_.end(); ++it) {
+  for (std::map<std::string, std::string>::const_iterator it = headers_.begin(); it != headers_.end(); ++it) {
     // Content-Length is always computed from the body below.
     if (equalsIgnoreCase(it->first, "Content-Length"))
       continue;
     oss << it->first << ": " << it->second << "\r\n";
   }
-  for (std::vector<std::string>::const_iterator it = setCookies_.begin();
-       it != setCookies_.end(); ++it)
+  for (std::vector<std::string>::const_iterator it = setCookies_.begin(); it != setCookies_.end(); ++it)
     oss << "Set-Cookie: " << *it << "\r\n";
   oss << "Content-Length: " << body_.size() << "\r\n\r\n";
   std::string header = oss.str();

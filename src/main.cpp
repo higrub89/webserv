@@ -48,8 +48,7 @@ int main(int argc, char* argv[], char* envp[]) {
     epoll.init();
 
     // ── Crear ServerHandler por cada puerto ──────────────────────────
-    ServerHandler* server =
-      new ServerHandler(8080, defaultConfig, epoll, router);
+    ServerHandler* server = new ServerHandler(8080, defaultConfig, epoll, router);
     server->setup();
     epoll.addHandler(server, EPOLLIN);
 
@@ -57,8 +56,7 @@ int main(int argc, char* argv[], char* envp[]) {
     epoll.run();
     Logger::info("WebServer shutdown complete");
   } catch (const std::exception& e) {
-    // TODO
-    // Checkear si es necesario loggear algo, o hacer algo especifico
+    Logger::error(std::string("Fatal error: ") + e.what());
     return 1;
   }
   (void)argc;

@@ -15,19 +15,16 @@ std::string Logger::timestamp() {
 }
 
 void Logger::info(const std::string& msg) {
-  std::cout << timestamp() << " " << ANSI_INFO << "[INFO]" << ANSI_RESET << "  "
-            << msg << std::endl;
+  std::cout << timestamp() << " " << ANSI_INFO << "[INFO]" << ANSI_RESET << "  " << msg << std::endl;
 }
 
 void Logger::error(const std::string& msg) {
-  std::cerr << timestamp() << " " << ANSI_ERROR << "[ERROR]" << ANSI_RESET
-            << " " << msg << std::endl;
+  std::cerr << timestamp() << " " << ANSI_ERROR << "[ERROR]" << ANSI_RESET << " " << msg << std::endl;
 }
 
 void Logger::debug(const std::string& msg) {
   if (DEBUG)
-    std::cout << timestamp() << " " << ANSI_DEBUG << "[DEBUG]" << ANSI_RESET
-              << " " << msg << std::endl;
+    std::cout << timestamp() << " " << ANSI_DEBUG << "[DEBUG]" << ANSI_RESET << " " << msg << std::endl;
 }
 
 std::string Logger::addrToString(const struct sockaddr_in& addr) {

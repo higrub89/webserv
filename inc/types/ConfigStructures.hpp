@@ -7,9 +7,7 @@
 
 /**
  * @struct LocationConfig
- * @brief Configuration rules for a specific URI route block.
- *
- * Replaces: Location-related configuration structures in Types.hpp
+ * @brief Configuration directives for a specific URI location route.
  */
 struct LocationConfig {
   std::vector<std::string> allowed_methods;
@@ -17,21 +15,15 @@ struct LocationConfig {
   bool autoindex;
   std::string index_file;
   size_t client_max_body_size;  // 0 = inherit from ServerConfig
-
-  // Maps CGI extensions (e.g., ".py", ".php") to their respective executable
-  // binaries. Resolves: Multi-CGI parallel support bonus requirement.
   std::map<std::string, std::string> cgi_handlers;
-
   std::string return_redirect;
   bool upload_enable;
-  std::string upload_store;  // Path where uploaded files should be stored.
+  std::string upload_store;
 };
 
 /**
  * @struct ServerConfig
- * @brief Configuration rules for a specific virtual server.
- *
- * Replaces: ServerConfig structures in Types.hpp
+ * @brief Configuration directives defining a Virtual Server block.
  */
 struct ServerConfig {
   std::vector<std::string> server_names;
@@ -43,19 +35,14 @@ struct ServerConfig {
 
 /**
  * @struct ServerGroup
- * @brief Groups servers sharing the same physical bind port.
- *
- * Replaces: None (Introduced to prevent EADDRINUSE by allowing one socket bind
- * per port)
+ * @brief Groups Virtual Servers sharing the same physical IP and listening port.
  */
 struct ServerGroup {
   std::string ip;
   int port;
-  std::vector<ServerConfig>
-    servers;  // Index 0 represents the default_server for this port.
+  std::vector<ServerConfig> servers;  // servers[0] is default_server
 };
 
-// Type definition mapping "IP:Port" or "Port" string to its ServerGroup.
 typedef std::map<std::string, ServerGroup> ConfigMap;
 
 #endif  // CONFIGSTRUCTURES_HPP_

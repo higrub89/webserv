@@ -22,8 +22,7 @@ EpollManager::EpollManager() : epollFd_(-1), running_(false) {
 EpollManager::~EpollManager() {
   std::map<int, AEventHandler*> copy = handlers_;
   handlers_.clear();
-  for (std::map<int, AEventHandler*>::iterator it = copy.begin();
-       it != copy.end(); ++it) {
+  for (std::map<int, AEventHandler*>::iterator it = copy.begin(); it != copy.end(); ++it) {
     epoll_ctl(epollFd_, EPOLL_CTL_DEL, it->first, NULL);
     delete it->second;
   }
@@ -36,8 +35,7 @@ EpollManager::~EpollManager() {
 void EpollManager::init() {
   epollFd_ = epoll_create(1);
   if (epollFd_ < 0)
-    throw std::runtime_error(std::string("epoll_create failed: ") +
-                             strerror(errno));
+    throw std::runtime_error(std::string("epoll_create failed: ") + strerror(errno));
 }
 
 // ─── Bucle central de eventos ───────────────────────────────────────────────
@@ -96,15 +94,13 @@ void EpollManager::addHandler(AEventHandler* handler, uint32_t events) {
 
   if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, handler->getFd(), &ev) < 0) {
     std::ostringstream oss;
-    oss << "epoll_ctl ADD failed on fd=" << handler->getFd() << ": "
-        << strerror(errno);
+    oss << "epoll_ctl ADD failed on fd=" << handler->getFd() << ": " << strerror(errno);
     throw std::runtime_error(oss.str());
   }
   handlers_[handler->getFd()] = handler;
 }
 
-void EpollManager::updateHandlerEvents(AEventHandler* handler,
-                                       uint32_t events) {
+void EpollManager::updateHandlerEvents(AEventHandler* handler, uint32_t events) {
   struct epoll_event ev;
   std::memset(&ev, 0, sizeof(ev));
   ev.events = events;
@@ -124,8 +120,7 @@ void EpollManager::cleanupTimeouts() {
   time_t now = std::time(NULL);
   std::vector<AEventHandler*> expired;
 
-  for (std::map<int, AEventHandler*>::iterator it = handlers_.begin();
-       it != handlers_.end(); ++it) {
+  for (std::map<int, AEventHandler*>::iterator it = handlers_.begin(); it != handlers_.end(); ++it) {
     if (it->second->isTimedOut(now))
       expired.push_back(it->second);
   }

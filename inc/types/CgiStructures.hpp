@@ -1,13 +1,15 @@
 #ifndef CGISTRUCTURES_HPP_
 #define CGISTRUCTURES_HPP_
 
+#include <string>
+
 #include "ClientHandler.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 
 /**
  * @struct CgiRequestContext
- * @brief Holds the context for a CGI request
+ * @brief Context and resolved paths for a single CGI execution lifecycle.
  */
 struct CgiRequestContext {
   const HttpRequest& req;

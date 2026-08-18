@@ -16,18 +16,13 @@
 
 /**
  * @class Logger
- * @brief Provides logging utilities for the server.
- *
- * Replaces: SocketUtils.hpp
+ * @brief Console logging utility with ANSI colors and timestamps.
  */
 class Logger {
 public:
   static std::string timestamp();
-
   static void info(const std::string& msg);
-
   static void error(const std::string& msg);
-
   static void debug(const std::string& msg);
 
   static std::string addrToString(const struct sockaddr_in& addr);

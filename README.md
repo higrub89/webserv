@@ -97,7 +97,9 @@ inc/
 │   ├── AEventHandler.hpp
 │   ├── ClientHandler.hpp
 │   ├── EpollManager.hpp
-│   └── ServerHandler.hpp
+│   ├── Logger.hpp
+│   ├── ServerHandler.hpp
+│   └── Utils.hpp
 ├── http/
 │   ├── HttpParser.hpp
 │   ├── HttpRequest.hpp
@@ -106,15 +108,16 @@ inc/
 │   ├── Router.hpp
 │   └── SessionManager.hpp
 ├── methods/
-│   ├── IMethodHandler.hpp
+│   ├── IMethodExecutor.hpp
 │   ├── GetMethodHandler.hpp (Futuro)
 │   ├── PostMethodHandler.hpp (Futuro)
 │   └── DeleteMethodHandler.hpp (Futuro)
 ├── cgi/
-│   ├── CgiMethodHandler.hpp
+│   ├── CgiExecutor.hpp
 │   ├── CgiReadHandler.hpp
 │   └── CgiWriteHandler.hpp
 └── types/
+    ├── CgiStructures.hpp
     └── ConfigStructures.hpp
 ```
 
@@ -142,7 +145,7 @@ inc/
   * `void removeHandler(AEventHandler* handler)`: Quita al manejador de la monitorización.
 
 #### ServerHandler.hpp
-* **Clase:** `ServerHandler`
+* **Clase:** `ServerHandler` (Hereda de `AEventHandler`)
 * **Descripción:** Socket pasivo de escucha. Al recibir eventos de lectura, llama a `accept()` de forma no bloqueante y registra el nuevo socket cliente creando una instancia de `ClientHandler`.
 
 #### ClientHandler.hpp
@@ -151,6 +154,14 @@ inc/
 * **Métodos:**
   * `void registerCgi(pid_t pid, CgiReadHandler* read_h, CgiWriteHandler* write_h)`: Registro de control de CGI.
   * `void clearCgi()`: Limpieza y reap de procesos CGI activos.
+
+#### Logger.hpp
+* **Clase:** `Logger` (Métodos estáticos)
+* **Descripción:** Utilidad de registro formateado por consola con marcas de tiempo y niveles de severidad (`info`, `error`, `debug`).
+
+#### Utils.hpp
+* **Clase:** `Utils` (Métodos estáticos)
+* **Descripción:** Utilidades de apoyo para extracción de extensiones, localización de fin de cabeceras HTTP, formateo a variables de entorno CGI y conversiones seguras de cadenas compatibles con C++98.
 
 ### 2. Directorio inc/http/ (Parseo y Protocolo)
 
@@ -172,39 +183,43 @@ inc/
 
 #### Router.hpp
 * **Clase:** `Router`
-* **Descripción:** Resuelve los Virtual Hosts (mediante Host y puerto), busca la localización correspondiente (Location) con mayor coincidencia de prefijo, y despacha la petición al handler adecuado.
+* **Descripción:** Resuelve los Servidores Virtuales (mediante Host y puerto), busca la localización correspondiente (Location) con mayor coincidencia de prefijo (Longest Prefix Match), valida límites de tamaño y métodos permitidos, y despacha la petición al ejecutor adecuado.
 
 #### SessionManager.hpp
 * **Clase:** `SessionManager`
 * **Descripción:** Administrador de sesiones en memoria para validar la identidad de los usuarios y gestionar la expiración por inactividad.
 
-### 4. Directorio inc/methods/ (Handlers de Verbos HTTP)
+### 4. Directorio inc/methods/ (Ejecutores de Verbos HTTP)
 
-#### IMethodHandler.hpp
-* **Clase:** `IMethodHandler` (Interfaz base)
-* **Descripción:** Declara la interfaz común para el tratamiento de los verbos HTTP.
+#### IMethodExecutor.hpp
+* **Clase:** `IMethodExecutor` (Interfaz base)
+* **Descripción:** Declara la interfaz Strategy común (`handle`) para la ejecución polimórfica de los verbos HTTP y llamadas a CGI.
 
 *Nota: Aquí se ubicarán en el futuro las implementaciones específicas como `GetMethodHandler.hpp`, `PostMethodHandler.hpp` y `DeleteMethodHandler.hpp`.*
 
 ### 5. Directorio inc/cgi/ (Manejadores de Procesos CGI)
 
-#### CgiMethodHandler.hpp
-* **Clase:** `CgiMethodHandler` (Hereda de `IMethodHandler`)
-* **Descripción:** Handler dinámico que ejecuta el binario CGI configurado, preparando el entorno (`envp`) e iniciando la redirección de pipes.
+#### CgiExecutor.hpp
+* **Clase:** `CgiExecutor` (Hereda de `IMethodExecutor`)
+* **Descripción:** Ejecutor dinámico que lanza el script CGI configurado mediante `fork` y `execve`, configurando variables de entorno estándar e inicializando tuberías no bloqueantes (`CgiReadHandler` y `CgiWriteHandler`).
 
 #### CgiReadHandler.hpp
 * **Clase:** `CgiReadHandler` (Hereda de `AEventHandler`)
-* **Descripción:** Manejador asíncrono para el pipe de lectura (stdout del proceso hijo) del CGI, recopilando su salida.
+* **Descripción:** Manejador asíncrono para el pipe de lectura (stdout del proceso hijo) del CGI, recopilando su salida y cabeceras.
 
 #### CgiWriteHandler.hpp
 * **Clase:** `CgiWriteHandler` (Hereda de `AEventHandler`)
 * **Descripción:** Manejador asíncrono para el pipe de escritura (stdin del proceso hijo) del CGI, alimentando el cuerpo de la petición.
 
-### 6. Directorio inc/types/ (Tipados)
+### 6. Directorio inc/types/ (Tipados y Contextos)
 
 #### ConfigStructures.hpp
-* **Estructuras:** `LocationConfig`, `ServerConfig`, `VirtualHostGroup`, `ConfigMap`
-* **Descripción:** Modelos de configuración del servidor. Soporta mapeo múltiple de CGIs (`cgi_handlers`) y rutas de almacenamiento para subidas de archivos.
+* **Estructuras:** `LocationConfig`, `ServerConfig`, `ServerGroup`, `ConfigMap`
+* **Descripción:** Modelos de configuración del servidor. Soporta mapeo múltiple de CGIs (`cgi_handlers`), rutas de almacenamiento para subidas de archivos, y agrupación de servidores virtuales por puerto (`ServerGroup`).
+
+#### CgiStructures.hpp
+* **Estructura:** `CgiRequestContext`
+* **Descripción:** Encapsula el contexto y rutas resueltas durante el ciclo de vida de ejecución de una petición CGI.
 
 ---
 
@@ -229,7 +244,7 @@ El reparto de responsabilidades se divide de manera balanceada de la siguiente f
 
 ### 3. Angel - Enrutamiento, CGI y Cookies/Sesiones
 * Enrutamiento de peticiones por host y coincidencia de prefijos en URI (`Router.cpp`).
-* Integración no bloqueante de procesos CGI mediante lectura/escritura asíncrona en pipes registradas en el multiplexor (CgiReadHandler.cpp y CgiWriteHandler.cpp).
+* Integración no bloqueante de procesos CGI mediante lectura/escritura asíncrona en pipes registradas en el multiplexor (`CgiExecutor.cpp`, `CgiReadHandler.cpp` y `CgiWriteHandler.cpp`).
 * **(Bonus - Múltiples CGIs):** Control simultáneo de procesos CGI activos (`fork`, `execve`, y reap no bloqueante con `waitpid` y flag `WNOHANG`), gestionando de forma independiente múltiples procesos y tuberías activas por cliente.
 * **(Bonus - Cookies/Sesiones):** Diseño y desarrollo de la clase `SessionManager` (base de datos en memoria para sesiones) y validación/control de acceso por sesión en el enrutamiento.
 
@@ -244,7 +259,7 @@ El reparto de responsabilidades se divide de manera balanceada de la siguiente f
 | **I/O Físico del Cliente** | Gestión del descriptor del cliente en [ClientHandler](inc/core/ClientHandler.hpp), buffers de red raw y **envíos parciales** seguros. | Reciclaje lógico de buffers. | Ninguno. |
 | **Archivo de Configuración** | Ninguno. | Analizador sintáctico completo en `ConfigParser.cpp` y estructurado de datos. | Ninguno. |
 | **Protocolo HTTP (Core)** | Ninguno. | Parser incremental FSM en [HttpParser](inc/http/HttpParser.hpp), DTOs [HttpRequest](inc/http/HttpRequest.hpp) y [HttpResponse](inc/http/HttpResponse.hpp). | Ninguno. |
-| **Enrutamiento y Lógica** | Ninguno. | Ninguno. | Selección de vhosts y locations en [Router](inc/router/Router.hpp), y verbos HTTP vía [IMethodHandler](inc/methods/IMethodHandler.hpp). |
-| **Ejecución CGI (Core + Bonus)** | Multiplexa los fds de pipes de forma transparente usando `AEventHandler`. | **(Bonus):** Parsea múltiples asociaciones CGI por extensión desde la configuración. | **(Bonus):** Lógica de CGI asíncrona en [CgiReadHandler](inc/cgi/CgiReadHandler.hpp) y [CgiWriteHandler](inc/cgi/CgiWriteHandler.hpp), control de procesos y tuberías concurrentes. |
+| **Enrutamiento y Lógica** | Ninguno. | Ninguno. | Selección de servidores virtuales y locations en [Router](inc/router/Router.hpp), y verbos HTTP vía [IMethodExecutor](inc/methods/IMethodExecutor.hpp). |
+| **Ejecución CGI (Core + Bonus)** | Multiplexa los fds de pipes de forma transparente usando `AEventHandler`. | **(Bonus):** Parsea múltiples asociaciones CGI por extensión desde la configuración. | **(Bonus):** Lógica de CGI asíncrona en [CgiExecutor](inc/cgi/CgiExecutor.hpp), [CgiReadHandler](inc/cgi/CgiReadHandler.hpp) y [CgiWriteHandler](inc/cgi/CgiWriteHandler.hpp), control de procesos y tuberías concurrentes. |
 | **Cookies y Sesiones (Bonus)** | Soporte pasivo en sockets para flujos con estado. | **(Bonus):** Parseo de cabeceras `Cookie` y formateador de `Set-Cookie` en la capa HTTP. | **(Bonus):** Lógica del gestor de sesiones en memoria (`SessionManager`) y control de acceso. |
 
