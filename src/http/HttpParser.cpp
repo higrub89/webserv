@@ -1,7 +1,9 @@
-// STUB — Responsabilidad de Alex. Implementación mínima para enlazar.
 #include "HttpParser.hpp"
 
-HttpParser::HttpParser(size_t max_body_size) : state_(STATE_REQUEST_LINE), clientMaxBodySize_(max_body_size), errorCode_(0), chunkSizeAccumulator_(0), bytesReadInChunk_(0) {
+#include <algorithm>
+
+HttpParser::HttpParser(size_t max_body_size)
+  : state_(STATE_REQUEST_LINE), clientMaxBodySize_(max_body_size), errorCode_(0), chunkSizeAccumulator_(0), bytesReadInChunk_(0) {
 }
 
 HttpParser::~HttpParser() {
@@ -16,34 +18,138 @@ void HttpParser::reset() {
 }
 
 bool HttpParser::consume(std::vector<char>& raw_buffer, HttpRequest& req) {
-  (void)req;
-  // Stub: detectar fin de cabeceras HTTP (\r\n\r\n)
-  std::string data(raw_buffer.begin(), raw_buffer.end());
-  if (data.find("\r\n\r\n") != std::string::npos) {
-    state_ = STATE_COMPLETE;
+  while (state_ != STATE_COMPLETE && state_ != STATE_ERROR) {
+    bool progress = false;
+    switch (state_) {
+      case STATE_REQUEST_LINE:
+        progress = handleRequestLine(raw_buffer, req);
+        break;
+
+      case STATE_HEADERS:
+        // TODO: Implement header parsing logic
+        break;
+
+      case STATE_BODY_IDENTITY:
+        // TODO: Handle body with Content-Length
+        break;
+
+      case STATE_BODY_CHUNKED:
+        // TODO: Handle chunked body
+        break;
+
+      case STATE_CHUNK_HEADER:
+        // TODO: Handle chunk header parsing
+        break;
+
+      case STATE_CHUNK_DATA:
+        // TODO: Handle chunk data
+        break;
+
+      case STATE_CHUNK_CRLF:
+        // TODO: Handle CRLF after chunk data
+        break;
+
+      default:
+        break;
+    }
+
+    if (!progress) {
+      break;
+    }
+  }
+
+  return state_ == STATE_COMPLETE;
+}
+
+bool HttpParser::readLine(const std::vector<char>& buffer, size_t& pos, std::string& outLine) {
+  size_t start = pos;
+  while (pos < buffer.size() && buffer[pos] != '\n') {
+    ++pos;
+  }
+  if (pos >= buffer.size()) {
+    return false;
+  }
+
+  size_t len = pos - start;
+  if (len > 0 && buffer[pos - 1] == '\r') {
+    --len;
+  }
+
+  outLine.assign(&buffer[start], len);
+  pos++;
+  return true;
+}
+
+bool HttpParser::handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& req) {
+  size_t pos = 0;
+  std::string line;
+  if (!readLine(raw_buffer, pos, line)) {
+    return false;
+  }
+
+  if (line.empty()) {
+    raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
     return true;
   }
-  return false;
+
+  size_t methodEnd = line.find(' ');
+  if (methodEnd == std::string::npos || methodEnd == 0) {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  size_t uriEnd = line.find(' ', methodEnd + 1);
+  if (uriEnd == std::string::npos || uriEnd == methodEnd + 1) {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  std::string method = line.substr(0, methodEnd);
+  std::string uri = line.substr(methodEnd + 1, uriEnd - methodEnd - 1);
+  std::string version = line.substr(uriEnd + 1);
+
+  if (version.find(' ') != std::string::npos || version.substr(0, 5) != "HTTP/") {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  if (version != "HTTP/1.1" && version != "HTTP/1.0") {
+    state_ = STATE_ERROR;
+    errorCode_ = 505;
+    return false;
+  }
+
+  if (uri.empty() || uri[0] != '/') {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  size_t queryPos = uri.find('?');
+  if (queryPos != std::string::npos) {
+    req.setPath(uri.substr(0, queryPos));
+    req.setQueryString(uri.substr(queryPos + 1));
+  } else {
+    req.setPath(uri);
+    req.setQueryString("");
+  }
+
+  req.setMethod(method);
+  req.setUri(uri);
+  req.setVersion(version);
+
+  state_ = STATE_HEADERS;
+  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
+  return true;
 }
 
 HttpParser::ParseState HttpParser::getState() const {
   return state_;
 }
+
 int HttpParser::getErrorCode() const {
   return errorCode_;
-}
-
-bool HttpParser::parseRequestLine(HttpRequest& req) {
-  (void)req;
-  return false;
-}
-bool HttpParser::parseHeaders(HttpRequest& req) {
-  (void)req;
-  return false;
-}
-bool HttpParser::parseChunkHeader() {
-  return false;
-}
-void HttpParser::resolveBodyType(HttpRequest& req) {
-  (void)req;
 }

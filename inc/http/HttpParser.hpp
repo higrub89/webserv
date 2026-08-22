@@ -36,10 +36,13 @@ private:
   size_t chunkSizeAccumulator_;
   size_t bytesReadInChunk_;
 
-  bool parseRequestLine(HttpRequest& req);
+  bool readLine(const std::vector<char>& buffer, size_t& pos, std::string& outLine);
+
   bool parseHeaders(HttpRequest& req);
   bool parseChunkHeader();
   void resolveBodyType(HttpRequest& req);
+
+  bool handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& req);
 
 public:
   HttpParser(size_t max_body_size);
