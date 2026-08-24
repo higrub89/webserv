@@ -33,7 +33,7 @@ bool HttpParser::consume(std::vector<char>& raw_buffer, HttpRequest& req) {
         break;
 
       case STATE_BODY_IDENTITY:
-        // TODO: Handle body with Content-Length
+        progress = handleBodyIdentity(raw_buffer, req);
         break;
 
       case STATE_BODY_CHUNKED:
@@ -248,6 +248,27 @@ bool HttpParser::resolveBodyType(HttpRequest& req) {
 
   state_ = STATE_COMPLETE;
   return true;
+}
+
+bool HttpParser::handleBodyIdentity(std::vector<char>& raw_buffer, HttpRequest& req) {
+  size_t needed = req.contentLength() - req.getBody().size();
+  if (needed == 0) {
+    state_ = STATE_COMPLETE;
+    return true;
+  }
+  if (raw_buffer.empty()) {
+    return false;
+  }
+
+  size_t to_consume = std::min(needed, raw_buffer.size());
+  req.appendBody(&raw_buffer[0], to_consume);
+  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + to_consume);
+
+  if (req.getBody().size() == req.contentLength()) {
+    state_ = STATE_COMPLETE;
+    return true;
+  }
+  return false;
 }
 
 HttpParser::ParseState HttpParser::getState() const {
