@@ -1,6 +1,9 @@
 #include "HttpParser.hpp"
 
-#include <algorithm>
+#include <cctype>
+#include <sstream>
+
+#include "Utils.hpp"
 
 HttpParser::HttpParser(size_t max_body_size)
   : state_(STATE_REQUEST_LINE), clientMaxBodySize_(max_body_size), errorCode_(0), chunkSizeAccumulator_(0), bytesReadInChunk_(0) {
@@ -26,7 +29,7 @@ bool HttpParser::consume(std::vector<char>& raw_buffer, HttpRequest& req) {
         break;
 
       case STATE_HEADERS:
-        // TODO: Implement header parsing logic
+        progress = handleHeaders(raw_buffer, req);
         break;
 
       case STATE_BODY_IDENTITY:
@@ -143,6 +146,107 @@ bool HttpParser::handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& r
 
   state_ = STATE_HEADERS;
   raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
+  return true;
+}
+
+bool HttpParser::handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req) {
+  size_t pos = 0;
+  std::string line;
+  while (readLine(raw_buffer, pos, line)) {
+    if (line.empty()) {
+      raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
+
+      if (req.getHeaders().find("host") == req.getHeaders().end()) {
+        state_ = STATE_ERROR;
+        errorCode_ = 400;
+        return false;
+      }
+
+      req.parseCookies();
+
+      std::map<std::string, std::string>::const_iterator connIt = req.getHeaders().find("connection");
+      if (connIt != req.getHeaders().end() && Utils::equalsIgnoreCase(connIt->second, "close")) {
+        req.setKeepAlive(false);
+      } else {
+        req.setKeepAlive(true);
+      }
+
+      return resolveBodyType(req);
+    }
+
+    size_t colonPos = line.find(':');
+    if (colonPos == std::string::npos || colonPos == 0) {
+      state_ = STATE_ERROR;
+      errorCode_ = 400;
+      return false;
+    }
+
+    std::string headerName = line.substr(0, colonPos);
+    if (headerName.find(' ') != std::string::npos) {
+      state_ = STATE_ERROR;
+      errorCode_ = 400;
+      return false;
+    }
+    headerName = Utils::toLowerCase(Utils::trim(headerName));
+    std::string headerValue = Utils::trim(line.substr(colonPos + 1));
+    req.addHeader(headerName, headerValue);
+  }
+
+  if (pos > 0) {
+    raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
+  }
+  return false;
+}
+
+bool HttpParser::resolveBodyType(HttpRequest& req) {
+  const std::map<std::string, std::string>& headers = req.getHeaders();
+
+  std::map<std::string, std::string>::const_iterator teIt = headers.find("transfer-encoding");
+  if (teIt != headers.end() && Utils::equalsIgnoreCase(teIt->second, "chunked")) {
+    state_ = STATE_CHUNK_HEADER;
+    req.setChunked(true);
+    chunkSizeAccumulator_ = 0;
+    bytesReadInChunk_ = 0;
+    return true;
+  }
+
+  std::map<std::string, std::string>::const_iterator clIt = headers.find("content-length");
+  if (clIt != headers.end()) {
+    const std::string& clStr = clIt->second;
+    if (clStr.empty()) {
+      state_ = STATE_ERROR;
+      errorCode_ = 400;
+      return false;
+    }
+
+    for (size_t i = 0; i < clStr.size(); ++i) {
+      if (!std::isdigit(static_cast<unsigned char>(clStr[i]))) {
+        state_ = STATE_ERROR;
+        errorCode_ = 400;
+        return false;
+      }
+    }
+
+    std::istringstream iss(clStr);
+    size_t contentLength = 0;
+    iss >> contentLength;
+
+    if (clientMaxBodySize_ > 0 && contentLength > clientMaxBodySize_) {
+      state_ = STATE_ERROR;
+      errorCode_ = 413;
+      return false;
+    }
+
+    req.setContentLength(contentLength);
+    if (contentLength > 0) {
+      state_ = STATE_BODY_IDENTITY;
+    } else {
+      state_ = STATE_COMPLETE;
+    }
+    return true;
+  }
+
+  state_ = STATE_COMPLETE;
   return true;
 }
 

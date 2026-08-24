@@ -38,9 +38,7 @@ private:
 
   bool readLine(const std::vector<char>& buffer, size_t& pos, std::string& outLine);
 
-  bool parseHeaders(HttpRequest& req);
-  bool parseChunkHeader();
-  void resolveBodyType(HttpRequest& req);
+  bool resolveBodyType(HttpRequest& req);
 
   bool handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& req);
   bool handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req);
