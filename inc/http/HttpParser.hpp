@@ -43,6 +43,7 @@ private:
   void resolveBodyType(HttpRequest& req);
 
   bool handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req);
 
 public:
   HttpParser(size_t max_body_size);

@@ -102,14 +102,14 @@ void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_p
   close(in_pipe[1]);
   close(out_pipe[0]);
   if (dup2(in_pipe[0], STDIN_FILENO) == -1) {
-    std::cerr << "CGI dup2 stdin failed: " << strerror(errno) << std::endl;
+    Logger::error("CGI dup2 stdin failed: " + std::string(strerror(errno)));
     close(in_pipe[0]);
     close(out_pipe[1]);
     std::exit(1);
   }
   close(in_pipe[0]);
   if (dup2(out_pipe[1], STDOUT_FILENO) == -1) {
-    std::cerr << "CGI dup2 stdout failed: " << strerror(errno) << std::endl;
+    Logger::error("CGI dup2 stdout failed: " + std::string(strerror(errno)));
     close(out_pipe[1]);
     std::exit(1);
   }
@@ -121,7 +121,7 @@ void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_p
     std::string dir = ctx.script_path.substr(0, last_slash);
     script_filename = "./" + ctx.script_path.substr(last_slash + 1);
     if (chdir(dir.c_str()) == -1) {
-      std::cerr << "CGI chdir failed: " << strerror(errno) << std::endl;
+      Logger::error("CGI chdir failed: " + std::string(strerror(errno)));
       std::exit(1);
     }
   }
@@ -132,7 +132,7 @@ void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_p
   argv[2] = NULL;
 
   execve(argv[0], argv, child_env);
-  std::cerr << "CGI execve failed: " << strerror(errno) << std::endl;
+  Logger::error("CGI execve failed: " + std::string(strerror(errno)));
   std::exit(127);
 }
 
