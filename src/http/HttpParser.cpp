@@ -1,6 +1,7 @@
 #include "HttpParser.hpp"
 
 #include <cctype>
+#include <cstdlib>
 #include <sstream>
 
 #include "Utils.hpp"
@@ -36,12 +37,8 @@ bool HttpParser::consume(std::vector<char>& raw_buffer, HttpRequest& req) {
         progress = handleBodyIdentity(raw_buffer, req);
         break;
 
-      case STATE_BODY_CHUNKED:
-        // TODO: Handle chunked body
-        break;
-
       case STATE_CHUNK_HEADER:
-        // TODO: Handle chunk header parsing
+        progress = handleChunkHeader(raw_buffer, req);
         break;
 
       case STATE_CHUNK_DATA:
@@ -213,23 +210,20 @@ bool HttpParser::resolveBodyType(HttpRequest& req) {
   std::map<std::string, std::string>::const_iterator clIt = headers.find("content-length");
   if (clIt != headers.end()) {
     const std::string& clStr = clIt->second;
-    if (clStr.empty()) {
+    if (clStr.empty() || !std::isdigit(static_cast<unsigned char>(clStr[0]))) {
       state_ = STATE_ERROR;
       errorCode_ = 400;
       return false;
     }
 
-    for (size_t i = 0; i < clStr.size(); ++i) {
-      if (!std::isdigit(static_cast<unsigned char>(clStr[i]))) {
-        state_ = STATE_ERROR;
-        errorCode_ = 400;
-        return false;
-      }
-    }
+    char* endPtr = NULL;
+    unsigned long contentLength = std::strtoul(clStr.c_str(), &endPtr, 10);
 
-    std::istringstream iss(clStr);
-    size_t contentLength = 0;
-    iss >> contentLength;
+    if (*endPtr != '\0') {
+      state_ = STATE_ERROR;
+      errorCode_ = 400;
+      return false;
+    }
 
     if (clientMaxBodySize_ > 0 && contentLength > clientMaxBodySize_) {
       state_ = STATE_ERROR;
@@ -269,6 +263,59 @@ bool HttpParser::handleBodyIdentity(std::vector<char>& raw_buffer, HttpRequest& 
     return true;
   }
   return false;
+}
+
+bool HttpParser::handleChunkHeader(std::vector<char>& raw_buffer, HttpRequest& req) {
+  size_t pos = 0;
+  std::string line;
+  if (!readLine(raw_buffer, pos, line)) {
+    return false;
+  }
+
+  if (line.empty() || !std::isxdigit(static_cast<unsigned char>(line[0]))) {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  char* endPtr = NULL;
+  unsigned long chunkSize = std::strtoul(line.c_str(), &endPtr, 16);
+
+  if (endPtr == line.c_str()) {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  while (*endPtr == ' ' || *endPtr == '\t') {
+    endPtr++;
+  }
+
+  if (*endPtr != '\0' && *endPtr != ';') {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
+
+  if (chunkSize == 0) {
+    chunkSizeAccumulator_ = 0;
+    bytesReadInChunk_ = 0;
+    state_ = STATE_CHUNK_CRLF;
+    return true;
+  }
+
+  if (clientMaxBodySize_ > 0 && req.getBody().size() + chunkSize > clientMaxBodySize_) {
+    state_ = STATE_ERROR;
+    errorCode_ = 413;
+    return false;
+  }
+
+  chunkSizeAccumulator_ = chunkSize;
+  bytesReadInChunk_ = 0;
+  state_ = STATE_CHUNK_DATA;
+  return true;
 }
 
 HttpParser::ParseState HttpParser::getState() const {

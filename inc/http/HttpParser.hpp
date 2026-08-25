@@ -19,7 +19,6 @@ public:
     STATE_REQUEST_LINE,
     STATE_HEADERS,
     STATE_BODY_IDENTITY,
-    STATE_BODY_CHUNKED,
     STATE_CHUNK_HEADER,
     STATE_CHUNK_DATA,
     STATE_CHUNK_CRLF,
@@ -43,6 +42,7 @@ private:
   bool handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& req);
   bool handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req);
   bool handleBodyIdentity(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleChunkHeader(std::vector<char>& raw_buffer, HttpRequest& req);
 
 public:
   HttpParser(size_t max_body_size);
