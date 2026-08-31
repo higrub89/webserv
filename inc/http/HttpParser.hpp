@@ -43,6 +43,8 @@ private:
   bool handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req);
   bool handleBodyIdentity(std::vector<char>& raw_buffer, HttpRequest& req);
   bool handleChunkHeader(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleChunkData(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleChunkCRLF(std::vector<char>& raw_buffer, HttpRequest& req);
 
 public:
   HttpParser(size_t max_body_size);

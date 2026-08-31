@@ -2,7 +2,6 @@
 
 #include <cctype>
 #include <cstdlib>
-#include <sstream>
 
 #include "Utils.hpp"
 
@@ -42,11 +41,11 @@ bool HttpParser::consume(std::vector<char>& raw_buffer, HttpRequest& req) {
         break;
 
       case STATE_CHUNK_DATA:
-        // TODO: Handle chunk data
+        progress = handleChunkData(raw_buffer, req);
         break;
 
       case STATE_CHUNK_CRLF:
-        // TODO: Handle CRLF after chunk data
+        progress = handleChunkCRLF(raw_buffer, req);
         break;
 
       default:
@@ -316,6 +315,51 @@ bool HttpParser::handleChunkHeader(std::vector<char>& raw_buffer, HttpRequest& r
   bytesReadInChunk_ = 0;
   state_ = STATE_CHUNK_DATA;
   return true;
+}
+
+bool HttpParser::handleChunkData(std::vector<char>& raw_buffer, HttpRequest& req) {
+  size_t needed = chunkSizeAccumulator_ - bytesReadInChunk_;
+  if (needed == 0) {
+    state_ = STATE_CHUNK_CRLF;
+    return true;
+  }
+  if (raw_buffer.empty()) {
+    return false;
+  }
+
+  size_t to_consume = std::min(needed, raw_buffer.size());
+  req.appendBody(&raw_buffer[0], to_consume);
+  bytesReadInChunk_ += to_consume;
+  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + to_consume);
+
+  if (bytesReadInChunk_ == chunkSizeAccumulator_) {
+    state_ = STATE_CHUNK_CRLF;
+    return true;
+  }
+  return false;
+}
+
+bool HttpParser::handleChunkCRLF(std::vector<char>& raw_buffer, HttpRequest& req) {
+  if (raw_buffer.size() < 2) {
+    return false;
+  }
+
+  if (raw_buffer[0] != '\r' || raw_buffer[1] != '\n') {
+    state_ = STATE_ERROR;
+    errorCode_ = 400;
+    return false;
+  }
+
+  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + 2);
+
+  if (chunkSizeAccumulator_ == 0) {
+    state_ = STATE_COMPLETE;
+    return true;
+  } else {
+    state_ = STATE_CHUNK_HEADER;
+    return true;
+  }
+  (void)req;
 }
 
 HttpParser::ParseState HttpParser::getState() const {
