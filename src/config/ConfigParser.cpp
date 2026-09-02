@@ -4,6 +4,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "Utils.hpp"
+
 namespace {
 
 // Throws a line-numbered configuration error (decisions #2b/#5: zero
@@ -14,32 +16,15 @@ void fail(int line, const std::string& msg) {
   throw std::runtime_error(oss.str());
 }
 
-bool isDigits(const std::string& s) {
-  if (s.empty())
-    return false;
-  for (std::string::size_type i = 0; i < s.size(); ++i)
-    if (s[i] < '0' || s[i] > '9')
-      return false;
-  return true;
-}
-
 bool parseOnOff(const std::string& value, const std::string& name, int line) {
   if (value == "on")
     return true;
   if (value == "off")
     return false;
   fail(line, "directive '" + name + "' expects 'on' or 'off', got '" + value +
-                 "'");
+               "'");
   return false;  // unreachable
 }
-
-// Indices for the per-block "already seen" flags (decision #4: duplicated
-// directive is a fatal error).
-enum ServerSeen { SEEN_LISTEN, SEEN_SERVER_NAME, SEEN_ROOT, SEEN_BODY_SIZE,
-                  SERVER_SEEN_COUNT };
-enum LocationSeen { LSEEN_METHODS, LSEEN_ROOT, LSEEN_AUTOINDEX, LSEEN_INDEX,
-                    LSEEN_REDIRECT, LSEEN_UPLOAD_ENABLE, LSEEN_UPLOAD_STORE,
-                    LSEEN_BODY_SIZE, LOCATION_SEEN_COUNT };
 
 void checkDuplicate(std::vector<bool>& seen, int idx, const std::string& name,
                     int line) {
@@ -50,8 +35,10 @@ void checkDuplicate(std::vector<bool>& seen, int idx, const std::string& name,
 
 }  // namespace
 
-ConfigParser::ConfigParser() : pos_(0) {}
-ConfigParser::~ConfigParser() {}
+ConfigParser::ConfigParser() : pos_(0) {
+}
+ConfigParser::~ConfigParser() {
+}
 
 ConfigMap ConfigParser::parse(const std::string& filepath) {
   std::ifstream in(filepath.c_str());
@@ -111,13 +98,17 @@ void ConfigParser::tokenize(std::istream& in) {
   }
 }
 
-bool ConfigParser::atEnd() const { return pos_ >= tokens_.size(); }
+bool ConfigParser::atEnd() const {
+  return pos_ >= tokens_.size();
+}
 
 const ConfigParser::Token& ConfigParser::peek() const {
   return tokens_[pos_];
 }
 
-ConfigParser::Token ConfigParser::next() { return tokens_[pos_++]; }
+ConfigParser::Token ConfigParser::next() {
+  return tokens_[pos_++];
+}
 
 void ConfigParser::expect(const std::string& text) {
   if (atEnd())
@@ -161,7 +152,7 @@ void ConfigParser::parseServer(ConfigMap& out) {
 
   // Locations without their own root inherit the server root.
   for (std::map<std::string, LocationConfig>::iterator it =
-           server.locations.begin();
+         server.locations.begin();
        it != server.locations.end(); ++it)
     if (it->second.root_dir.empty())
       it->second.root_dir = server.root_dir;
@@ -178,14 +169,14 @@ void ConfigParser::parseServer(ConfigMap& out) {
   for (std::vector<ServerConfig>::const_iterator sv = group.servers.begin();
        sv != group.servers.end(); ++sv)
     for (std::vector<std::string>::const_iterator existing =
-             sv->server_names.begin();
+           sv->server_names.begin();
          existing != sv->server_names.end(); ++existing)
       for (std::vector<std::string>::const_iterator name =
-               server.server_names.begin();
+             server.server_names.begin();
            name != server.server_names.end(); ++name)
         if (*existing == *name)
           fail(keyword.line, "duplicated server_name '" + *name +
-                                 "' for " + key.str());
+                               "' for " + key.str());
   group.servers.push_back(server);
 }
 
@@ -236,7 +227,7 @@ LocationConfig ConfigParser::parseLocation(std::string& path) {
       peek().text == ";")
     fail(keyword.line, "'location' expects a path");
   path = next().text;
-  if (path[0] != '/')
+  if (!Utils::startsWith(path, "/"))
     fail(keyword.line, "location path must start with '/'");
   expect("{");
 
@@ -283,9 +274,9 @@ LocationConfig ConfigParser::parseLocation(std::string& path) {
       std::vector<std::string> args = readArgs(name.text, 2, name.line);
       if (args.size() != 2)
         fail(name.line, "'cgi' expects: cgi <.ext> <binary>");
-      if (args[0][0] != '.')
+      if (!Utils::startsWith(args[0], "."))
         fail(name.line, "cgi extension must start with '.', got '" +
-                            args[0] + "'");
+                          args[0] + "'");
       if (location.cgi_handlers.find(args[0]) !=
           location.cgi_handlers.end())
         fail(name.line, "duplicated cgi mapping for '" + args[0] + "'");
@@ -337,7 +328,7 @@ void ConfigParser::parseListen(const std::string& value, std::string& ip,
     host = normalizeIp(value.substr(0, colon), line);
     portStr = value.substr(colon + 1);
   }
-  if (!isDigits(portStr) || portStr.size() > 5)
+  if (!Utils::isDigits(portStr) || portStr.size() > 5)
     fail(line, "invalid port in 'listen " + value + "'");
   long p = 0;
   for (std::string::size_type i = 0; i < portStr.size(); ++i)
@@ -361,7 +352,7 @@ std::string ConfigParser::normalizeIp(const std::string& ip, int line) {
     if (dot == std::string::npos)
       dot = ip.size();
     std::string part = ip.substr(start, dot - start);
-    if (!isDigits(part) || part.size() > 3)
+    if (!Utils::isDigits(part) || part.size() > 3)
       fail(line, "invalid IP address '" + ip + "'");
     int value = 0;
     for (std::string::size_type i = 0; i < part.size(); ++i)
@@ -391,9 +382,9 @@ size_t ConfigParser::parseBodySize(const std::string& value, int line) {
     multiplier = 1048576;
     digits = value.substr(0, value.size() - 1);
   }
-  if (!isDigits(digits))
+  if (!Utils::isDigits(digits))
     fail(line, "invalid size '" + value +
-                   "' (expected digits with optional k/K/m/M suffix)");
+                 "' (expected digits with optional k/K/m/M suffix)");
   size_t result = 0;
   for (std::string::size_type i = 0; i < digits.size(); ++i) {
     if (result > 4294967295UL / 10)
@@ -406,7 +397,7 @@ size_t ConfigParser::parseBodySize(const std::string& value, int line) {
 }
 
 int ConfigParser::parseErrorCode(const std::string& value, int line) {
-  if (!isDigits(value) || value.size() != 3)
+  if (!Utils::isDigits(value) || value.size() != 3)
     fail(line, "invalid error_page code '" + value + "'");
   int code = 0;
   for (std::string::size_type i = 0; i < value.size(); ++i)
@@ -422,7 +413,7 @@ void ConfigParser::validateMethods(const std::vector<std::string>& methods,
        it != methods.end(); ++it) {
     if (*it != "GET" && *it != "POST" && *it != "DELETE")
       fail(line, "unsupported method '" + *it +
-                     "' (allowed: GET, POST, DELETE)");
+                   "' (allowed: GET, POST, DELETE)");
     for (std::vector<std::string>::const_iterator other = methods.begin();
          other != it; ++other)
       if (*other == *it)

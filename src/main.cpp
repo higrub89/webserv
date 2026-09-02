@@ -54,8 +54,6 @@ int main(int argc, char* argv[], char* envp[]) {
 
     // ── Arrancar event-loop ─────────────────────────────────────────
     epoll.run();
-
-    delete server;
     Logger::info("WebServer shutdown complete");
   } catch (const std::exception& e) {
     // Decisión #5: config inválida → mensaje claro a stderr y no arrancar.

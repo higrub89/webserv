@@ -63,6 +63,29 @@ std::string toLowerCase(const std::string& str);
 bool equalsIgnoreCase(const std::string& a, const std::string& b);
 
 /**
+ * @brief Checks if a string starts with a given prefix without allocating memory.
+ * @param str The string to inspect.
+ * @param prefix The prefix to check for.
+ * @return true if str starts with prefix, false otherwise.
+ */
+bool startsWith(const std::string& str, const std::string& prefix);
+
+/**
+ * @brief Checks if a string ends with a given suffix without allocating memory.
+ * @param str The string to inspect.
+ * @param suffix The suffix to check for.
+ * @return true if str ends with suffix, false otherwise.
+ */
+bool endsWith(const std::string& str, const std::string& suffix);
+
+/**
+ * @brief Checks if a string consists exclusively of decimal digit characters ('0'-'9').
+ * @param str Input string.
+ * @return true if non-empty and all characters are digits, false otherwise.
+ */
+bool isDigits(const std::string& str);
+
+/**
  * @brief Converts any streamable value to std::string (C++98 alternative to std::to_string).
  * @param val The value to convert.
  * @return The string representation of val.

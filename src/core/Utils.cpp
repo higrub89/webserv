@@ -79,4 +79,26 @@ bool equalsIgnoreCase(const std::string& a, const std::string& b) {
   return true;
 }
 
+bool startsWith(const std::string& str, const std::string& prefix) {
+  if (str.size() < prefix.size())
+    return false;
+  return str.compare(0, prefix.size(), prefix) == 0;
+}
+
+bool endsWith(const std::string& str, const std::string& suffix) {
+  if (str.size() < suffix.size())
+    return false;
+  return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+bool isDigits(const std::string& str) {
+  if (str.empty())
+    return false;
+  for (size_t i = 0; i < str.size(); ++i) {
+    if (str[i] < '0' || str[i] > '9')
+      return false;
+  }
+  return true;
+}
+
 }  // namespace Utils

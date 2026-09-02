@@ -109,7 +109,7 @@ bool HttpParser::handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& r
   std::string uri = line.substr(methodEnd + 1, uriEnd - methodEnd - 1);
   std::string version = line.substr(uriEnd + 1);
 
-  if (version.find(' ') != std::string::npos || version.substr(0, 5) != "HTTP/") {
+  if (version.find(' ') != std::string::npos || !Utils::startsWith(version, "HTTP/")) {
     state_ = STATE_ERROR;
     errorCode_ = 400;
     return false;
