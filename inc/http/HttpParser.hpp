@@ -19,7 +19,6 @@ public:
     STATE_REQUEST_LINE,
     STATE_HEADERS,
     STATE_BODY_IDENTITY,
-    STATE_BODY_CHUNKED,
     STATE_CHUNK_HEADER,
     STATE_CHUNK_DATA,
     STATE_CHUNK_CRLF,
@@ -36,10 +35,16 @@ private:
   size_t chunkSizeAccumulator_;
   size_t bytesReadInChunk_;
 
-  bool parseRequestLine(HttpRequest& req);
-  bool parseHeaders(HttpRequest& req);
-  bool parseChunkHeader();
-  void resolveBodyType(HttpRequest& req);
+  bool readLine(const std::vector<char>& buffer, size_t& pos, std::string& outLine);
+
+  bool resolveBodyType(HttpRequest& req);
+
+  bool handleRequestLine(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleBodyIdentity(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleChunkHeader(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleChunkData(std::vector<char>& raw_buffer, HttpRequest& req);
+  bool handleChunkCRLF(std::vector<char>& raw_buffer, HttpRequest& req);
 
 public:
   HttpParser(size_t max_body_size);

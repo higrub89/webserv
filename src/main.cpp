@@ -1,6 +1,7 @@
 #include <csignal>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 #include "ConfigParser.hpp"
 #include "EpollManager.hpp"

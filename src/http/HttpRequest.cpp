@@ -1,15 +1,6 @@
 #include "HttpRequest.hpp"
 
-namespace {
-// Trims leading/trailing spaces and tabs (RFC 7230 OWS).
-std::string trim(const std::string& s) {
-  std::string::size_type begin = s.find_first_not_of(" \t");
-  if (begin == std::string::npos)
-    return "";
-  std::string::size_type end = s.find_last_not_of(" \t");
-  return s.substr(begin, end - begin + 1);
-}
-}  // namespace
+#include "Utils.hpp"
 
 HttpRequest::HttpRequest() : isChunked_(false), contentLength_(0), keepAlive_(false) {
 }
@@ -111,14 +102,14 @@ void HttpRequest::parseCookies() {
     std::string::size_type end = raw.find(';', start);
     if (end == std::string::npos)
       end = raw.size();
-    std::string pair = trim(raw.substr(start, end - start));
+    std::string pair = Utils::trim(raw.substr(start, end - start));
     if (!pair.empty()) {
       // Split at the first '='; values may legally contain '=' themselves.
       std::string::size_type eq = pair.find('=');
       if (eq != std::string::npos) {
-        std::string key = trim(pair.substr(0, eq));
+        std::string key = Utils::trim(pair.substr(0, eq));
         if (!key.empty())
-          cookies_[key] = trim(pair.substr(eq + 1));
+          cookies_[key] = Utils::trim(pair.substr(eq + 1));
       }
     }
     start = end + 1;

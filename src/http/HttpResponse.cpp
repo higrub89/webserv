@@ -2,24 +2,7 @@
 
 #include <sstream>
 
-namespace {
-// Case-insensitive comparison for header keys (RFC 7230).
-bool equalsIgnoreCase(const std::string& a, const std::string& b) {
-  if (a.size() != b.size())
-    return false;
-  for (std::string::size_type i = 0; i < a.size(); ++i) {
-    char ca = a[i];
-    char cb = b[i];
-    if (ca >= 'A' && ca <= 'Z')
-      ca = static_cast<char>(ca - 'A' + 'a');
-    if (cb >= 'A' && cb <= 'Z')
-      cb = static_cast<char>(cb - 'A' + 'a');
-    if (ca != cb)
-      return false;
-  }
-  return true;
-}
-}  // namespace
+#include "Utils.hpp"
 
 HttpResponse::HttpResponse() : statusCode_(200), statusPhrase_("OK") {
 }
@@ -71,7 +54,7 @@ std::vector<char> HttpResponse::serialize() const {
   oss << "HTTP/1.1 " << statusCode_ << " " << statusPhrase_ << "\r\n";
   for (std::map<std::string, std::string>::const_iterator it = headers_.begin(); it != headers_.end(); ++it) {
     // Content-Length is always computed from the body below.
-    if (equalsIgnoreCase(it->first, "Content-Length"))
+    if (Utils::equalsIgnoreCase(it->first, "Content-Length"))
       continue;
     oss << it->first << ": " << it->second << "\r\n";
   }

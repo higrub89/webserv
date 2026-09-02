@@ -30,6 +30,26 @@ public:
   ConfigMap parse(const std::string& filepath);
 
 private:
+  enum ServerSeen {
+    SEEN_LISTEN,
+    SEEN_SERVER_NAME,
+    SEEN_ROOT,
+    SEEN_BODY_SIZE,
+    SERVER_SEEN_COUNT
+  };
+
+  enum LocationSeen {
+    LSEEN_METHODS,
+    LSEEN_ROOT,
+    LSEEN_AUTOINDEX,
+    LSEEN_INDEX,
+    LSEEN_REDIRECT,
+    LSEEN_UPLOAD_ENABLE,
+    LSEEN_UPLOAD_STORE,
+    LSEEN_BODY_SIZE,
+    LOCATION_SEEN_COUNT
+  };
+
   struct Token {
     std::string text;
     int line;
