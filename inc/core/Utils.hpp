@@ -86,6 +86,14 @@ bool endsWith(const std::string& str, const std::string& suffix);
 bool isDigits(const std::string& str);
 
 /**
+ * @brief Normalizes a URI path (removes '.' and '..' dot-segments).
+ * Prevents path traversal out of root and guarantees a valid leading '/' path.
+ * @param path The raw URI path.
+ * @return Normalized canonical path string.
+ */
+std::string normalizeUriPath(const std::string& path);
+
+/**
  * @brief Converts any streamable value to std::string (C++98 alternative to std::to_string).
  * @param val The value to convert.
  * @return The string representation of val.

@@ -29,7 +29,8 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     serverPtr = &resolveServer("", server_port);
   }
   const ServerConfig& server = *serverPtr;
-  const LocationConfig* location = resolveLocation(req.getPath(), server);
+  std::string normalizedPath = Utils::normalizeUriPath(req.getPath());
+  const LocationConfig* location = resolveLocation(normalizedPath, server);
   if (location == NULL) {
     setErrorResponse(res, 404, server);
     client->changeState(ClientHandler::WRITING_RESPONSE);
@@ -69,7 +70,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
   }
 
   // Check if extension matches a configured CGI handler
-  std::string ext = Utils::getExtension(req.getPath());
+  std::string ext = Utils::getExtension(normalizedPath);
   if (!ext.empty()) {
     std::map<std::string, std::string>::const_iterator cgiIt = location->cgi_handlers.find(ext);
     if (cgiIt != location->cgi_handlers.end()) {
