@@ -35,6 +35,7 @@ SRCS := \
 	$(SRC_DIR)/http/HttpParser.cpp \
 	$(SRC_DIR)/http/HttpRequest.cpp \
 	$(SRC_DIR)/http/HttpResponse.cpp \
+	$(SRC_DIR)/methods/GetExecutor.cpp \
 	$(SRC_DIR)/router/Router.cpp
 
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
