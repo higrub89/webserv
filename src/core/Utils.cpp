@@ -101,4 +101,47 @@ bool isDigits(const std::string& str) {
   return true;
 }
 
+std::string normalizeUriPath(const std::string& path) {
+  if (path.empty()) {
+    return "/";
+  }
+
+  bool hasTrailingSlash = (path.size() > 1 && path[path.size() - 1] == '/');
+  std::vector<std::string> segments;
+  std::string::size_type start = 0;
+
+  while (start < path.size()) {
+    std::string::size_type end = path.find('/', start);
+    if (end == std::string::npos) {
+      end = path.size();
+    }
+    if (end > start) {
+      std::string segment = path.substr(start, end - start);
+      if (segment == ".") {
+        // Skip current directory dot segment
+      } else if (segment == "..") {
+        if (!segments.empty()) {
+          segments.pop_back();
+        }
+      } else {
+        segments.push_back(segment);
+      }
+    }
+    start = end + 1;
+  }
+
+  if (segments.empty()) {
+    return "/";
+  }
+
+  std::string result;
+  for (size_t i = 0; i < segments.size(); ++i) {
+    result += "/" + segments[i];
+  }
+  if (hasTrailingSlash) {
+    result += "/";
+  }
+  return result;
+}
+
 }  // namespace Utils
