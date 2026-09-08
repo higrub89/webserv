@@ -32,6 +32,7 @@ SRCS := \
 	$(SRC_DIR)/core/Utils.cpp \
 	$(SRC_DIR)/core/EpollManager.cpp \
 	$(SRC_DIR)/core/ServerHandler.cpp \
+	$(SRC_DIR)/http/HttpError.cpp \
 	$(SRC_DIR)/http/HttpParser.cpp \
 	$(SRC_DIR)/http/HttpRequest.cpp \
 	$(SRC_DIR)/http/HttpResponse.cpp \

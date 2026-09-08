@@ -63,6 +63,7 @@ std::string GetExecutor::getMimeType(const std::string& ext) const {
 }
 
 void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client, const LocationConfig& location) {
+  (void)client;
   std::string root = location.root_dir;
   if (root.size() > 1 && root[root.size() - 1] == '/') {
     root.erase(root.size() - 1);
@@ -71,35 +72,17 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
 
   if (access(filePath.c_str(), F_OK) != 0) {
     res.setStatusCode(404);
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("Connection", "close");
-    res.setBody("<html><body><h1>404 Not Found</h1></body></html>");
-    if (client) {
-      client->changeState(ClientHandler::WRITING_RESPONSE);
-    }
     return;
   }
 
   if (access(filePath.c_str(), R_OK) != 0) {
     res.setStatusCode(403);
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("Connection", "close");
-    res.setBody("<html><body><h1>403 Forbidden</h1></body></html>");
-    if (client) {
-      client->changeState(ClientHandler::WRITING_RESPONSE);
-    }
     return;
   }
 
   struct stat fileStat;
   if (stat(filePath.c_str(), &fileStat) != 0) {
     res.setStatusCode(500);
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("Connection", "close");
-    res.setBody("<html><body><h1>500 Internal Server Error</h1></body></html>");
-    if (client) {
-      client->changeState(ClientHandler::WRITING_RESPONSE);
-    }
     return;
   }
 
@@ -107,12 +90,6 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
     std::ifstream file(filePath.c_str(), std::ios::binary);
     if (!file.is_open()) {
       res.setStatusCode(500);
-      res.setHeader("Content-Type", "text/html");
-      res.setHeader("Connection", "close");
-      res.setBody("<html><body><h1>500 Internal Server Error</h1></body></html>");
-      if (client) {
-        client->changeState(ClientHandler::WRITING_RESPONSE);
-      }
       return;
     }
 
@@ -121,13 +98,8 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
     res.setStatusCode(200);
     res.setHeader("Content-Type", getMimeType(Utils::getExtension(filePath)));
     res.setBody(fileContent);
-    if (client) {
-      client->changeState(ClientHandler::WRITING_RESPONSE);
-    }
     return;
   } else if (S_ISDIR(fileStat.st_mode)) {
     // TODO: Directory handling (index.html / autoindex)
   }
-
-  client->changeState(ClientHandler::WRITING_RESPONSE);
 }
