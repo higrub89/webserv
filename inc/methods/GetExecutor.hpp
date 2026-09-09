@@ -23,6 +23,8 @@ public:
 
 private:
   std::string getMimeType(const std::string& ext) const;
+  void serveFile(const std::string& path, HttpResponse& res) const;
+  void generateAutoindex(const std::string& dirPath, const std::string& uriPath, HttpResponse& res) const;
 };
 
 #endif  // GETEXECUTOR_HPP_

@@ -1,6 +1,8 @@
 #include "GetExecutor.hpp"
 
+#include <dirent.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <fstream>
@@ -62,6 +64,49 @@ std::string GetExecutor::getMimeType(const std::string& ext) const {
   return kDefaultMimeType;
 }
 
+void GetExecutor::serveFile(const std::string& path, HttpResponse& res) const {
+  std::ifstream file(path.c_str(), std::ios::binary);
+  if (!file.is_open()) {
+    res.setStatusCode(500);
+    return;
+  }
+
+  std::vector<char> fileContent((std::istreambuf_iterator<char>(file)),
+                                std::istreambuf_iterator<char>());
+  res.setStatusCode(200);
+  res.setHeader("Content-Type", getMimeType(Utils::getExtension(path)));
+  res.setBody(fileContent);
+}
+
+void GetExecutor::generateAutoindex(const std::string& dirPath, const std::string& uriPath, HttpResponse& res) const {
+  DIR* dir = opendir(dirPath.c_str());
+  if (!dir) {
+    res.setStatusCode(403);
+    return;
+  }
+
+  std::string body = "<html><body><h1>Index of " + uriPath + "</h1><ul>";
+  struct dirent* entry;
+  while ((entry = readdir(dir)) != NULL) {
+    std::string name = entry->d_name;
+    if (name == ".") {
+      continue;
+    }
+    std::string href = uriPath;
+    if (href.empty() || href[href.size() - 1] != '/') {
+      href += "/";
+    }
+    href += name;
+    body += "<li><a href=\"" + href + "\">" + name + "</a></li>";
+  }
+  closedir(dir);
+  body += "</ul></body></html>";
+
+  res.setStatusCode(200);
+  res.setHeader("Content-Type", "text/html");
+  res.setBody(body);
+}
+
 void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client, const LocationConfig& location) {
   (void)client;
   std::string root = location.root_dir;
@@ -87,19 +132,39 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
   }
 
   if (S_ISREG(fileStat.st_mode)) {
-    std::ifstream file(filePath.c_str(), std::ios::binary);
-    if (!file.is_open()) {
-      res.setStatusCode(500);
+    serveFile(filePath, res);
+    return;
+  }
+
+  if (S_ISDIR(fileStat.st_mode)) {
+    if (req.getPath().empty() || req.getPath()[req.getPath().size() - 1] != '/') {
+      res.setStatusCode(301);
+      res.setHeader("Location", req.getPath() + "/");
       return;
     }
 
-    std::vector<char> fileContent((std::istreambuf_iterator<char>(file)),
-                                  std::istreambuf_iterator<char>());
-    res.setStatusCode(200);
-    res.setHeader("Content-Type", getMimeType(Utils::getExtension(filePath)));
-    res.setBody(fileContent);
-    return;
-  } else if (S_ISDIR(fileStat.st_mode)) {
-    // TODO: Directory handling (index.html / autoindex)
+    if (!location.index_file.empty()) {
+      std::string indexPath = filePath;
+      if (indexPath.empty() || indexPath[indexPath.size() - 1] != '/') {
+        indexPath += "/";
+      }
+      indexPath += location.index_file;
+
+      if (access(indexPath.c_str(), F_OK) == 0) {
+        if (access(indexPath.c_str(), R_OK) != 0) {
+          res.setStatusCode(403);
+          return;
+        }
+        serveFile(indexPath, res);
+        return;
+      }
+    }
+
+    if (location.autoindex) {
+      generateAutoindex(filePath, req.getPath(), res);
+      return;
+    }
   }
+
+  res.setStatusCode(403);
 }

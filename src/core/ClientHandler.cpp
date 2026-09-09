@@ -6,14 +6,11 @@
 
 #include <cerrno>
 #include <cstring>
-#include <iostream>
-#include <sstream>
 
 #include "CgiReadHandler.hpp"
 #include "CgiWriteHandler.hpp"
 #include "EpollManager.hpp"
 #include "Router.hpp"
-#include "Utils.hpp"
 
 #define CLIENT_TIMEOUT_SECS 60
 #define READ_BUF_SIZE 8192
@@ -108,36 +105,16 @@ void ClientHandler::onDisconnect() {
 }
 
 // ─── processRequest: integración con Router ─────────────────────────────────
-// STUB TEMPORAL: respuesta hardcoded hasta que Alex y Ángel tengan sus módulos
 
 void ClientHandler::processRequest() {
   state_ = PROCESSING;
 
   router_.dispatch(request_, response_, this, serverPort_);
 
-  std::string body =
-    "<html><body>"
-    "<h1>WebServer 42</h1>"
-    "<p>epoll layer OK &mdash; Ruben</p>"
-    "<pre>";
-
-  // Incluir la petición raw en la respuesta para debug
-  body.append(rawInBuffer_.begin(), rawInBuffer_.end());
-  body += "</pre></body></html>";
-
-  std::ostringstream oss;
-  oss << "HTTP/1.1 200 OK\r\n"
-      << "Content-Type: text/html\r\n"
-      << "Content-Length: " << body.size() << "\r\n"
-      << "Connection: close\r\n"
-      << "\r\n"
-      << body;
-
-  std::string raw = oss.str();
-  std::vector<char> data(raw.begin(), raw.end());
-  appendToOutput(data);
-
-  changeState(WRITING_RESPONSE);
+  if (state_ == WRITING_RESPONSE) {
+    std::vector<char> raw = response_.serialize();
+    appendToOutput(raw);
+  }
 }
 
 // ─── resetForKeepAlive ──────────────────────────────────────────────────────
