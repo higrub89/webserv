@@ -19,6 +19,11 @@ struct LocationConfig {
   std::string return_redirect;
   bool upload_enable;
   std::string upload_store;
+
+  LocationConfig()
+    : autoindex(false),
+      client_max_body_size(0),
+      upload_enable(false) {}
 };
 
 /**
@@ -31,6 +36,8 @@ struct ServerConfig {
   size_t client_max_body_size;
   std::map<int, std::string> error_pages;
   std::map<std::string, LocationConfig> locations;
+
+  ServerConfig() : client_max_body_size(1048576) {}
 };
 
 /**
@@ -41,6 +48,8 @@ struct ServerGroup {
   std::string ip;
   int port;
   std::vector<ServerConfig> servers;  // servers[0] is default_server
+
+  ServerGroup() : port(0) {}
 };
 
 typedef std::map<std::string, ServerGroup> ConfigMap;

@@ -3,8 +3,10 @@
 #include <stdexcept>
 #include <vector>
 
+#include "CgiExecutor.hpp"
 #include "ConfigParser.hpp"
 #include "EpollManager.hpp"
+#include "GetExecutor.hpp"
 #include "Logger.hpp"
 #include "Router.hpp"
 #include "ServerHandler.hpp"
@@ -39,6 +41,9 @@ int main(int argc, char* argv[], char* envp[]) {
 
     // ── Crear componentes ───────────────────────────────────────────
     Router router(configMap, envp);
+    router.registerMethodExecutor("GET", new GetExecutor());
+    router.registerMethodExecutor("CGI", new CgiExecutor(envp));
+
     EpollManager epoll;
     epoll.init();
 

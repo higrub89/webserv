@@ -74,6 +74,7 @@ public:
   void appendToOutput(const char* data, size_t len);
 
   void changeState(ClientState new_state);
+  ClientState getState() const { return state_; }
   bool isTimedOut(time_t current_time) const;
 
   EpollManager& getEpollManager() const { return epollManager_; }

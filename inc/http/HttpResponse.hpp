@@ -34,6 +34,11 @@ public:
   void setBody(const std::vector<char>& body);
   void setBody(const std::string& body);
 
+  int getStatusCode() const;
+  const std::string& getStatusPhrase() const;
+  const std::map<std::string, std::string>& getHeaders() const;
+  const std::vector<char>& getBody() const;
+
   void setCookie(const std::string& key, const std::string& value, const std::string& path = "/", int max_age = -1, bool http_only = true);
   std::vector<char> serialize() const;
   static const std::string& reasonPhrase(int code);

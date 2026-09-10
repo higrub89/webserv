@@ -1,11 +1,8 @@
 #include "Router.hpp"
 
 #include <algorithm>
-#include <fstream>
-#include <sstream>
 
-#include "CgiExecutor.hpp"
-#include "Logger.hpp"
+#include "HttpError.hpp"
 #include "Utils.hpp"
 
 Router::Router(const ConfigMap& config, char** envp) : globalConfig_(config), envp_(envp) {
@@ -32,8 +29,10 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
   std::string normalizedPath = Utils::normalizeUriPath(req.getPath());
   const LocationConfig* location = resolveLocation(normalizedPath, server);
   if (location == NULL) {
-    setErrorResponse(res, 404, server);
-    client->changeState(ClientHandler::WRITING_RESPONSE);
+    HttpError::populate(res, 404, server);
+    if (client) {
+      client->changeState(ClientHandler::WRITING_RESPONSE);
+    }
     return;
   }
 
@@ -43,17 +42,21 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
   }
 
   if (effectiveLimit > 0 && req.getBody().size() > effectiveLimit) {
-    setErrorResponse(res, 413, server);
-    client->changeState(ClientHandler::WRITING_RESPONSE);
+    HttpError::populate(res, 413, server);
+    if (client) {
+      client->changeState(ClientHandler::WRITING_RESPONSE);
+    }
     return;
   }
 
   // Allowed methods (location.allowed_methods) check
   if (!location->allowed_methods.empty()) {
     if (std::find(location->allowed_methods.begin(), location->allowed_methods.end(), req.getMethod()) == location->allowed_methods.end()) {
-      setErrorResponse(res, 405, server);
+      HttpError::populate(res, 405, server);
       res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
-      client->changeState(ClientHandler::WRITING_RESPONSE);
+      if (client) {
+        client->changeState(ClientHandler::WRITING_RESPONSE);
+      }
       return;
     }
   }
@@ -65,7 +68,9 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     res.setHeader("Location", location->return_redirect);
     res.setHeader("Connection", "close");
     res.setBody("");
-    client->changeState(ClientHandler::WRITING_RESPONSE);
+    if (client) {
+      client->changeState(ClientHandler::WRITING_RESPONSE);
+    }
     return;
   }
 
@@ -77,6 +82,14 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
       std::map<std::string, IMethodExecutor*>::iterator executorIt = methodRegistry_.find("CGI");
       if (executorIt != methodRegistry_.end()) {
         executorIt->second->handle(req, res, client, *location);
+        if (!client || client->getState() != ClientHandler::WAITING_FOR_CGI) {
+          if (res.getStatusCode() >= 400 && res.getBody().empty()) {
+            HttpError::populate(res, res.getStatusCode(), server);
+          }
+          if (client) {
+            client->changeState(ClientHandler::WRITING_RESPONSE);
+          }
+        }
         return;
       }
     }
@@ -84,12 +97,22 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
 
   std::map<std::string, IMethodExecutor*>::iterator methodIt = methodRegistry_.find(req.getMethod());
   if (methodIt == methodRegistry_.end()) {
-    setErrorResponse(res, 501, server);
-    client->changeState(ClientHandler::WRITING_RESPONSE);
+    HttpError::populate(res, 501, server);
+    if (client) {
+      client->changeState(ClientHandler::WRITING_RESPONSE);
+    }
     return;
   }
 
   methodIt->second->handle(req, res, client, *location);
+  if (!client || client->getState() != ClientHandler::WAITING_FOR_CGI) {
+    if (res.getStatusCode() >= 400 && res.getBody().empty()) {
+      HttpError::populate(res, res.getStatusCode(), server);
+    }
+    if (client) {
+      client->changeState(ClientHandler::WRITING_RESPONSE);
+    }
+  }
 }
 
 const ServerConfig& Router::resolveServer(const std::string& host, int server_port) const {
@@ -135,30 +158,10 @@ const LocationConfig* Router::resolveLocation(const std::string& uri, const Serv
 }
 
 void Router::setErrorResponse(HttpResponse& res, int errorCode, const ServerConfig& server) const {
-  res.reset();
-  res.setStatusCode(errorCode);
-  res.setHeader("Content-Type", "text/html");
-  res.setHeader("Connection", "close");
-
-  std::map<int, std::string>::const_iterator it = server.error_pages.find(errorCode);
-  if (it != server.error_pages.end()) {
-    const std::string& errorPagePath = it->second;
-    std::ifstream errorPageFile(errorPagePath.c_str());
-    if (errorPageFile.is_open()) {
-      std::stringstream buffer;
-      buffer << errorPageFile.rdbuf();
-      res.setBody(buffer.str());
-      return;
-    } else {
-      // warning level does not exist yet, using info for now
-      Logger::info("Custom error page not found or unreadable: " + errorPagePath);
-    }
-  }
-
-  res.setBody("<h1>" + Utils::toString(errorCode) + " " + HttpResponse::reasonPhrase(errorCode) + "</h1>");
+  HttpError::populate(res, errorCode, server);
 }
 
 void Router::setErrorResponse(HttpResponse& res, int errorCode, const std::string& host, int server_port) const {
   const ServerConfig& server = resolveServer(host, server_port);
-  setErrorResponse(res, errorCode, server);
+  HttpError::populate(res, errorCode, server);
 }

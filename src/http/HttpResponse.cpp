@@ -39,6 +39,22 @@ void HttpResponse::setBody(const std::string& body) {
   body_.assign(body.begin(), body.end());
 }
 
+int HttpResponse::getStatusCode() const {
+  return statusCode_;
+}
+
+const std::string& HttpResponse::getStatusPhrase() const {
+  return statusPhrase_;
+}
+
+const std::map<std::string, std::string>& HttpResponse::getHeaders() const {
+  return headers_;
+}
+
+const std::vector<char>& HttpResponse::getBody() const {
+  return body_;
+}
+
 void HttpResponse::setCookie(const std::string& key, const std::string& value, const std::string& path, int max_age, bool http_only) {
   std::ostringstream cookie;
   cookie << key << "=" << value << "; Path=" << path;
