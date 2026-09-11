@@ -49,18 +49,6 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     return;
   }
 
-  // Allowed methods (location.allowed_methods) check
-  if (!location->allowed_methods.empty()) {
-    if (std::find(location->allowed_methods.begin(), location->allowed_methods.end(), req.getMethod()) == location->allowed_methods.end()) {
-      HttpError::populate(res, 405, server);
-      res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
-      if (client) {
-        client->changeState(ClientHandler::WRITING_RESPONSE);
-      }
-      return;
-    }
-  }
-
   // HTTP Redirection (location.return_redirect)
   if (!location->return_redirect.empty()) {
     res.reset();
@@ -92,6 +80,18 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
         }
         return;
       }
+    }
+  }
+
+  // Allowed methods (location.allowed_methods) check
+  if (!location->allowed_methods.empty()) {
+    if (std::find(location->allowed_methods.begin(), location->allowed_methods.end(), req.getMethod()) == location->allowed_methods.end()) {
+      HttpError::populate(res, 405, server);
+      res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
+      if (client) {
+        client->changeState(ClientHandler::WRITING_RESPONSE);
+      }
+      return;
     }
   }
 
