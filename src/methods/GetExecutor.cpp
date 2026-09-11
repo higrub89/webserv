@@ -113,7 +113,20 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
   if (root.size() > 1 && root[root.size() - 1] == '/') {
     root.erase(root.size() - 1);
   }
-  std::string filePath = root + req.getPath();
+
+  std::string relPath = req.getPath();
+  if (!location.route_path.empty() &&
+      req.getPath().compare(0, location.route_path.size(), location.route_path) == 0) {
+    relPath = req.getPath().substr(location.route_path.size());
+  }
+  if (!relPath.empty() && relPath[0] == '/') {
+    relPath = relPath.substr(1);
+  }
+
+  std::string filePath = root;
+  if (!relPath.empty()) {
+    filePath += "/" + relPath;
+  }
 
   if (access(filePath.c_str(), F_OK) != 0) {
     res.setStatusCode(404);

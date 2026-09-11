@@ -232,6 +232,7 @@ LocationConfig ConfigParser::parseLocation(std::string& path) {
   expect("{");
 
   LocationConfig location;
+  location.route_path = path;
   location.autoindex = false;
   location.upload_enable = false;
   location.client_max_body_size = 0;  // 0 = hereda del server (contrato del Router)

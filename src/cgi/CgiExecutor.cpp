@@ -40,7 +40,26 @@ void CgiExecutor::parseUri(CgiRequestContext& ctx) {
 }
 
 bool CgiExecutor::resolveAndValidatePaths(CgiRequestContext& ctx, const LocationConfig& location) {
-  ctx.script_path = location.root_dir + ctx.script_name;
+  std::string root = location.root_dir;
+  if (root.size() > 1 && root[root.size() - 1] == "/") {
+    root.erase(root.size() - 1);
+  }
+
+  std::string relPath = ctx.script_name;
+  if (!location.route_path.empty() &&
+      ctx.script_name.compare(0, location.route_path.size(), location.route_path) == 0) {
+    relPath = ctx.script_name.substr(location.route_path.size());
+  }
+  if (!relPath.empty() && relPath[0] == "/") {
+    relPath = relPath.substr(1);
+  }
+
+  if (relPath.empty()) {
+    ctx.script_path = root;
+  } else {
+    ctx.script_path = root + "/" + relPath;
+  }
+
   std::string ext = Utils::getExtension(ctx.req.getUri());
   ctx.interpreter_path = "";
 
