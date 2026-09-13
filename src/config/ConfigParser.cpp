@@ -134,6 +134,7 @@ void ConfigParser::parseServer(ConfigMap& out) {
       int locLine = peek().line;
       std::string path;
       LocationConfig location = parseLocation(path);
+      location.path = path;
       if (server.locations.find(path) != server.locations.end())
         fail(locLine, "duplicated location '" + path + "'");
       server.locations[path] = location;

@@ -22,10 +22,11 @@ private:
   EpollManager& epollManager_;
   Router& router_;
   struct sockaddr_in address_;
+  std::string ip_;
   int port_;
 
 public:
-  ServerHandler(int port, const ServerConfig& config, EpollManager& epoll_manager, Router& router);
+  ServerHandler(const std::string& ip, int port, const ServerConfig& config, EpollManager& epoll_manager, Router& router);
   virtual ~ServerHandler();
 
   void setup();

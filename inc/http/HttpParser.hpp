@@ -62,6 +62,7 @@ public:
 
   ParseState getState() const;
   int getErrorCode() const;
+  void setMaxBodySize(size_t max_body_size);
 };
 
 #endif  // HTTPPARSER_HPP_

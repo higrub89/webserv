@@ -49,18 +49,6 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     return;
   }
 
-  // Allowed methods (location.allowed_methods) check
-  if (!location->allowed_methods.empty()) {
-    if (std::find(location->allowed_methods.begin(), location->allowed_methods.end(), req.getMethod()) == location->allowed_methods.end()) {
-      HttpError::populate(res, 405, server);
-      res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
-      if (client) {
-        client->changeState(ClientHandler::WRITING_RESPONSE);
-      }
-      return;
-    }
-  }
-
   // HTTP Redirection (location.return_redirect)
   if (!location->return_redirect.empty()) {
     res.reset();
@@ -92,6 +80,18 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
         }
         return;
       }
+    }
+  }
+
+  // Allowed methods (location.allowed_methods) check
+  if (!location->allowed_methods.empty()) {
+    if (std::find(location->allowed_methods.begin(), location->allowed_methods.end(), req.getMethod()) == location->allowed_methods.end()) {
+      HttpError::populate(res, 405, server);
+      res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
+      if (client) {
+        client->changeState(ClientHandler::WRITING_RESPONSE);
+      }
+      return;
     }
   }
 
@@ -152,6 +152,13 @@ const LocationConfig* Router::resolveLocation(const std::string& uri, const Serv
         bestMatch = &it->second;
         bestMatchLength = locationPath.length();
       }
+    } else if (locationPath.length() == uri.length() + 1 &&
+               locationPath[locationPath.length() - 1] == '/' &&
+               locationPath.compare(0, uri.length(), uri) == 0) {
+      if (locationPath.length() > bestMatchLength) {
+        bestMatch = &it->second;
+        bestMatchLength = locationPath.length();
+      }
     }
   }
   return bestMatch;
@@ -164,4 +171,24 @@ void Router::setErrorResponse(HttpResponse& res, int errorCode, const ServerConf
 void Router::setErrorResponse(HttpResponse& res, int errorCode, const std::string& host, int server_port) const {
   const ServerConfig& server = resolveServer(host, server_port);
   HttpError::populate(res, errorCode, server);
+}
+
+size_t Router::getMaxBodySizeForPort(int server_port) const {
+  size_t maxLimit = 0;
+  for (ConfigMap::const_iterator it = globalConfig_.begin(); it != globalConfig_.end(); ++it) {
+    if (it->second.port == server_port) {
+      for (size_t i = 0; i < it->second.servers.size(); ++i) {
+        const ServerConfig& s = it->second.servers[i];
+        if (s.client_max_body_size > maxLimit) {
+          maxLimit = s.client_max_body_size;
+        }
+        for (std::map<std::string, LocationConfig>::const_iterator lit = s.locations.begin(); lit != s.locations.end(); ++lit) {
+          if (lit->second.client_max_body_size > maxLimit) {
+            maxLimit = lit->second.client_max_body_size;
+          }
+        }
+      }
+    }
+  }
+  return maxLimit;
 }

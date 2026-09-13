@@ -21,7 +21,7 @@
  */
 class CgiReadHandler : public AEventHandler {
 public:
-  static const size_t kBufferSize = 4096;
+  static const size_t kBufferSize = 65536;
   static const size_t kMaxHeadersSize = 8192;
 
 private:

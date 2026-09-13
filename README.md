@@ -1,265 +1,165 @@
-# Referencia de Requisitos y Arquitectura - Webserv (42)
+*This project has been created as part of the 42 curriculum by rhiguita.*
 
-Este documento centraliza los requisitos del subject de 42, las comprobaciones de la hoja de evaluación y la distribución del diseño de cabeceras implementado en el directorio `inc/`.
+# Webserv — Non-Blocking HTTP/1.1 Web Server in C++98
 
----
+## Description
 
-## Parte 1: Requisitos del Subject
+**Webserv** is an asynchronous, event-driven HTTP/1.1 web server implemented in C++98. Inspired by NGINX, it provides a high-performance network service handling multiple concurrent connections using a single-threaded Linux `epoll` event loop without blocking I/O calls.
 
-### I. Reglas Generales
-* **Resiliencia ante fallos:** El programa no debe crashear bajo ninguna circunstancia (incluyendo quedarse sin memoria) ni terminar inesperadamente. De ocurrir, la calificación del proyecto será 0.
-* **Compilación y Makefile:** Compilación mediante Makefile con las reglas estándar: `$(NAME)`, `all`, `clean`, `fclean` y `re`. No debe realizar relinking innecesario.
-* **Estándar y Flags:** Compilación estricta en C++98 usando `c++` con los flags `-Wall -Wextra -Werror -std=c++98`.
-* **Uso del Lenguaje:** Utilizar funciones de C++ en la medida de lo posible (ej. `<cstring>` en lugar de `<string.h>`). Se permiten funciones de C autorizadas.
-* **Restricciones:** Prohibido el uso de librerías externas o Boost.
-* **Decisión de Diseño - Forma Canónica Ortodoxa:** Al no ser un requisito explícito del subject para este proyecto, se ha optado por no imponerla en clases administradoras de recursos y sockets (`ServerHandler`, `ClientHandler`, `EpollManager`, etc.) para favorecer el uso seguro de referencias constantes y evitar copias accidentales de descriptores. No obstante, es totalmente posible y aconsejable implementarla en clases DTO u objetos de datos puros (`HttpRequest`, `HttpResponse`) en caso de que copiar su información aporte valor al flujo del servidor.
+### Core Architecture & Features
 
-### II. Especificaciones del Ejecutable
-* **Nombre:** `webserv`
-* **Entregables:** `Makefile`, cabeceras (`*.hpp`, `*.h`), archivos fuente (`*.cpp`), y archivos de configuración.
-* **Uso:** `./webserv [archivo_de_configuracion]` (si no se especifica, debe usar una ruta por defecto).
+- **Single-Threaded Asynchronous Event Loop (`EpollManager`)**:
+  - Centralized multiplexer using Linux `epoll` with `EPOLLIN`, `EPOLLOUT`, and `EPOLLRDHUP`.
+  - Non-blocking I/O across listening sockets, client TCP sockets, and asynchronous CGI unidirectional pipes.
+  - Strict single-read/single-write call discipline per event dispatch.
+  - Automatic connection idle timeout sweeps (60-second inactivity detection).
 
-#### Funciones Autorizadas
-`execve`, `pipe`, `strerror`, `gai_strerror`, `errno`, `dup`, `dup2`, `fork`, `socketpair`, `htons`, `htonl`, `ntohs`, `ntohl`, `select`, `poll`, `epoll` (`epoll_create`, `epoll_ctl`, `epoll_wait`), `kqueue` (`kqueue`, `kevent`), `socket`, `accept`, `listen`, `send`, `recv`, `chdir`, `bind`, `connect`, `getaddrinfo`, `freeaddrinfo`, `setsockopt`, `getsockname`, `getprotobyname`, `fcntl`, `close`, `read`, `write`, `waitpid`, `kill`, `signal`, `access`, `stat`, `open`, `opendir`, `readdir` y `closedir`.
+- **Robust HTTP/1.1 & HTTP/1.0 Parser (`HttpParser`)**:
+  - Incremental Finite State Machine (FSM) reading raw byte streams without payload corruption.
+  - Full support for `Transfer-Encoding: chunked` (dynamic de-chunking) and `Content-Length` identity encoding.
+  - HTTP/1.1 mandatory `Host` header validation and HTTP/1.0 backward compatibility (`Connection: close` default).
+  - Pipelining and persistent Keep-Alive connections with preserved buffer state.
 
-### III. I/O y Concurrencia
-* **Naturaleza no bloqueante:** El servidor debe ser no bloqueante y gestionar de forma limpia las desconexiones de clientes.
-* **Bucle de eventos único:** Se debe utilizar un único multiplexor (`epoll` para Linux) en el hilo principal para todas las operaciones de I/O de red, incluyendo el socket de escucha.
-* **Monitoreo simultáneo:** El multiplexor debe controlar lecturas y escrituras de manera simultánea.
-* **Control previo de descriptores:** Está prohibido leer (`read`/`recv`) o escribir (`write`/`send`) sobre descriptores de red asíncronos sin que el multiplexor haya notificado que están listos para la operación.
-* **Archivos regulares:** Los archivos en disco están excluidos de esta regla; su lectura y escritura no requiere pasar por el multiplexor de eventos.
-* **Restricciones de `errno`:** Prohibido evaluar el valor de `errno` inmediatamente después de llamadas de I/O para desviar el flujo lógico del servidor.
+- **Routing & Virtual Hosts (`Router`, `GetExecutor`, `PostExecutor`, `DeleteExecutor`)**:
+  - Multi-port listening and virtual host resolution via `Host` header and `server_name`.
+  - Standard HTTP methods:
+    - **GET**: Static file serving, custom MIME type resolution, automatic directory indexing (`autoindex on/off`), and default index resolution.
+    - **POST**: Raw binary uploads and `multipart/form-data` parsing when `upload_enable on` is configured; standard payload handling.
+    - **DELETE**: File removal with permission validation and directory protection.
+  - HTTP Redirections (`302 Found`).
+  - Configurable `client_max_body_size` per server and per location route (`413 Payload Too Large`).
+  - Customizable error pages with fallback HTML generation.
 
-### IV. Reglas del Protocolo HTTP
-* **Persistencia:** Las conexiones de clientes no deben quedarse suspendidas indefinidamente.
-* **Compatibilidad:** Debe funcionar correctamente con navegadores web estándar (se sugiere contrastar con Nginx).
-* **Gestión de errores:** Códigos de estado HTTP precisos. Deben definirse páginas de error por defecto si la configuración no las provee.
-* **Uso de fork:** Limitado exclusivamente a la ejecución de scripts CGI.
-* **Funcionalidad obligatoria:**
-  * Servir archivos estáticos.
-  * Permitir subida de archivos (upload).
-  * Métodos GET, POST y DELETE.
-  * Escuchar en múltiples puertos de forma simultánea.
+- **Asynchronous CGI Subsystem (`CgiExecutor`, `CgiReadHandler`, `CgiWriteHandler`)**:
+  - Execution of CGI scripts (e.g. Python, Shell, compiled binaries) based on configured file extensions.
+  - Compliance with RFC 3875: standard environment variables (`REQUEST_METHOD`, `SCRIPT_FILENAME`, `PATH_INFO`, `QUERY_STRING`, `SERVER_PROTOCOL`, `HTTP_*`).
+  - Working directory (`chdir`) isolation to the script parent directory.
+  - Concurrent non-blocking pipe writing (request body feeding) and reading (response streaming) without deadlocks or buffer truncation.
 
-### V. Reglas de Plataforma
-* Modificación de descriptores a modo no bloqueante mediante `fcntl()`.
-* **Flags de fcntl permitidos:** Únicamente `F_SETFL`, `O_NONBLOCK` y `FD_CLOEXEC`.
-
-### VI. Archivo de Configuración
-Debe soportar sintaxis tipo Nginx (bloques `server` y `location` sin expresiones regulares):
-* Par IP:puerto de escucha.
-* Rutas de páginas de error personalizadas.
-* Límite de tamaño de cuerpo (`client_max_body_size`).
-* Configuración de rutas (locations):
-  * Métodos HTTP permitidos en la ruta.
-  * Redirecciones HTTP.
-  * Directorio raíz de búsqueda de archivos (root).
-  * Autoindex (listado de directorios).
-  * Archivo index por defecto.
-  * Activación de subidas de archivos y directorio de almacenamiento.
-
-### VII. CGI (Common Gateway Interface)
-* Ejecución basada en la extensión del archivo (ej. `.php`, `.py`).
-* Paso de metadatos mediante variables de entorno estándar.
-* **Peticiones Chunked:** El servidor debe des-segmentar (un-chunk) el cuerpo antes de enviarlo al CGI.
-* **Salida del CGI:** Si no incluye cabecera `Content-Length`, el fin de la transmisión vendrá marcado por el cierre de la tubería (EOF).
-* Directorio de ejecución relativo al script para permitir accesos locales.
-
-### VIII. Parte Bonus
-* Soporte para Cookies y sesiones de usuario.
-* Soporte para múltiples CGIs en paralelo.
+- **Bonus Modules**:
+  - **Session & Cookie Manager (`SessionManager`)**: In-memory session store generating 32-character secure alphanumeric tokens with automatic expiration sweeps.
+  - **Multi-CGI Support**: Independent handler mappings per file extension.
 
 ---
 
-## Parte 2: Hoja de Evaluación (Correction Sheet)
+## Instructions
 
-### I. Directrices de Evaluación
-* **Crashes:** Cualquier fallo de segmentación o terminación inesperada durante la defensa supone un 0 directo.
-* **Modificaciones en vivo:** Los evaluadores pueden pedir cambios sencillos en vivo para verificar la comprensión del código.
-* **Fugas de memoria:** Evaluación estricta de leaks mediante valgrind. Cualquier leak invalida los puntos de la sección correspondiente.
+### Compilation
 
-### II. Comprobaciones Obligatorias
-* **Control Crítico de Eventos:** El multiplexor debe controlar lectura y escritura al mismo tiempo en el bucle principal.
-* **Límite de I/O:** Límite estricto de una única operación de lectura o de escritura por cliente por cada iteración del bucle del multiplexor.
-* **Manejo de errores de socket:** Desconexión y borrado inmediato del cliente si `recv` o `send` devuelven un error o valor `<= 0`.
-* **I/O no controlado:** Cualquier lectura o escritura en descriptores no preparados o que no pasen por el multiplexor (salvo archivos en disco) es penalizada con un 0.
-* **Prueba de estrés (Siege):** Disponibilidad superior al 99.5% ejecutando `siege -b` indefinidamente sobre una página vacía. No debe haber aumento progresivo de memoria ni sockets colgados.
+Build the executable using GNU Make with strict flags (`-Wall -Wextra -Werror -std=c++98 -pedantic`):
 
----
-
-## Parte 3: Estructura de Cabeceras (inc/)
-
-La arquitectura del proyecto está organizada en subcarpetas dentro de `inc/`:
-
-```text
-inc/
-├── core/
-│   ├── AEventHandler.hpp
-│   ├── ClientHandler.hpp
-│   ├── EpollManager.hpp
-│   ├── Logger.hpp
-│   ├── ServerHandler.hpp
-│   └── Utils.hpp
-├── http/
-│   ├── HttpParser.hpp
-│   ├── HttpRequest.hpp
-│   └── HttpResponse.hpp
-├── router/
-│   ├── Router.hpp
-│   └── SessionManager.hpp
-├── methods/
-│   ├── IMethodExecutor.hpp
-│   ├── GetMethodHandler.hpp (Futuro)
-│   ├── PostMethodHandler.hpp (Futuro)
-│   └── DeleteMethodHandler.hpp (Futuro)
-├── cgi/
-│   ├── CgiExecutor.hpp
-│   ├── CgiReadHandler.hpp
-│   └── CgiWriteHandler.hpp
-└── types/
-    ├── CgiStructures.hpp
-    └── ConfigStructures.hpp
+```bash
+make        # Compiles the webserv binary
+make clean  # Removes object and dependency files
+make fclean # Removes objects and webserv executable
+make re     # Recompiles from scratch
 ```
 
-### 1. Directorio inc/core/ (Red y Multiplexor)
+### Execution
 
-#### AEventHandler.hpp
-* **Clase:** `AEventHandler` (Abstracta, base para control de eventos)
-* **Descripción:** Representación polimórfica de cualquier descriptor de archivo monitorizado por el multiplexor. Almacena el descriptor `fd_` y declara los métodos virtuales puros de callback.
-* **Métodos:**
-  * `int getFd() const`: Acceso al descriptor.
-  * `virtual void onReadReady() = 0`: Listo para leer.
-  * `virtual void onWriteReady() = 0`: Listo para escribir.
-  * `virtual void onDisconnect() = 0`: Cierre o error en el descriptor.
-  * `virtual bool isTimedOut(time_t current_time) const`: Validación de inactividad.
+Run the server by passing a configuration file path (or omit to use `config/default.conf`):
 
-#### EpollManager.hpp
-* **Clase:** `EpollManager`
-* **Descripción:** Implementación de la cola de eventos y despacho basada en `epoll`. Mantiene el registro de manejadores activos (`handlers_`) mapeando `fd` a su respectivo `AEventHandler*`.
-* **Métodos:**
-  * `void init()`: Creación del descriptor epoll.
-  * `void run()`: Bucle principal (`epoll_wait()`).
-  * `void stop()`: Terminar el bucle.
-  * `void addHandler(AEventHandler* handler, uint32_t events)`: Añadir al set de monitoreo.
-  * `void updateHandlerEvents(AEventHandler* handler, uint32_t events)`: Modificar flags de escucha.
-  * `void removeHandler(AEventHandler* handler)`: Quita al manejador de la monitorización.
+```bash
+./webserv [path/to/configuration.conf]
+```
 
-#### ServerHandler.hpp
-* **Clase:** `ServerHandler` (Hereda de `AEventHandler`)
-* **Descripción:** Socket pasivo de escucha. Al recibir eventos de lectura, llama a `accept()` de forma no bloqueante y registra el nuevo socket cliente creando una instancia de `ClientHandler`.
+Example:
+```bash
+./webserv config/default.conf
+```
 
-#### ClientHandler.hpp
-* **Clase:** `ClientHandler` (Hereda de `AEventHandler`)
-* **Descripción:** Representa la conexión del cliente y el control de E/S de su socket. Mantiene los buffers de red (`rawInBuffer_`, `rawOutBuffer_`), su estado transaccional, y controla posibles fugas o llamadas CGI huérfanas mediante el registro de procesos activos asociados.
-* **Métodos:**
-  * `void registerCgi(pid_t pid, CgiReadHandler* read_h, CgiWriteHandler* write_h)`: Registro de control de CGI.
-  * `void clearCgi()`: Limpieza y reap de procesos CGI activos.
+To run with the 42 official test suite configuration:
+```bash
+./webserv config/tester.conf
+```
 
-#### Logger.hpp
-* **Clase:** `Logger` (Métodos estáticos)
-* **Descripción:** Utilidad de registro formateado por consola con marcas de tiempo y niveles de severidad (`info`, `error`, `debug`).
+### Configuration File Syntax
 
-#### Utils.hpp
-* **Clase:** `Utils` (Métodos estáticos)
-* **Descripción:** Utilidades de apoyo para extracción de extensiones, localización de fin de cabeceras HTTP, formateo a variables de entorno CGI y conversiones seguras de cadenas compatibles con C++98.
+Configuration files follow an NGINX-style block hierarchy:
 
-### 2. Directorio inc/http/ (Parseo y Protocolo)
+```nginx
+server {
+    listen 8080;
+    server_name localhost;
+    root ./www;
+    client_max_body_size 10m;
 
-#### HttpParser.hpp
-* **Clase:** `HttpParser`
-* **Descripción:** Parser incremental no bloqueante basado en una máquina de estados finitos (FSM) que extrae la información del protocolo a partir de buffers de red.
-* **Métodos:**
-  * `bool consume(std::vector<char>& raw_buffer, HttpRequest& req)`: Consume bytes del buffer y construye el objeto de petición.
+    error_page 404 /errors/404.html;
+    error_page 500 502 /errors/50x.html;
 
-#### HttpRequest.hpp
-* **Clase:** `HttpRequest`
-* **Descripción:** Objeto que encapsula los datos de la solicitud. Implementa el método `reset()` para limpieza lógica y reutilización del objeto bajo carga constante, y procesa cabeceras `Cookie`.
+    location / {
+        methods GET;
+        index index.html;
+        autoindex off;
+    }
 
-#### HttpResponse.hpp
-* **Clase:** `HttpResponse`
-* **Descripción:** Encapsula la construcción de respuestas. Contiene buffers internos para cabeceras y cuerpo, serialize para generar la salida final hacia la red, y `setCookie` para inyectar cookies.
+    location /upload {
+        methods GET POST DELETE;
+        upload_enable on;
+        upload_store ./www/uploads;
+    }
 
-### 3. Directorio inc/router/ (Enrutamiento y Sesiones)
+    location /cgi-bin {
+        root ./www/cgi-bin;
+        methods GET POST;
+        cgi .py /usr/bin/python3;
+        cgi .sh /bin/sh;
+    }
 
-#### Router.hpp
-* **Clase:** `Router`
-* **Descripción:** Resuelve los Servidores Virtuales (mediante Host y puerto), busca la localización correspondiente (Location) con mayor coincidencia de prefijo (Longest Prefix Match), valida límites de tamaño y métodos permitidos, y despacha la petición al ejecutor adecuado.
+    location /old {
+        redirect /;
+    }
+}
+```
 
-#### SessionManager.hpp
-* **Clase:** `SessionManager`
-* **Descripción:** Administrador de sesiones en memoria para validar la identidad de los usuarios y gestionar la expiración por inactividad.
+### Verification & Testing
 
-### 4. Directorio inc/methods/ (Ejecutores de Verbos HTTP)
+1. **Static Content & Custom Error Pages**:
+   ```bash
+   curl -i http://localhost:8080/
+   curl -i http://localhost:8080/nonexistent
+   ```
 
-#### IMethodExecutor.hpp
-* **Clase:** `IMethodExecutor` (Interfaz base)
-* **Descripción:** Declara la interfaz Strategy común (`handle`) para la ejecución polimórfica de los verbos HTTP y llamadas a CGI.
+2. **File Upload & Deletion**:
+   ```bash
+   # Upload a file
+   curl -i -X POST http://localhost:8080/upload/data.txt -d "Sample text"
 
-*Nota: Aquí se ubicarán en el futuro las implementaciones específicas como `GetMethodHandler.hpp`, `PostMethodHandler.hpp` y `DeleteMethodHandler.hpp`.*
+   # Retrieve uploaded file
+   curl -i http://localhost:8080/upload/data.txt
 
-### 5. Directorio inc/cgi/ (Manejadores de Procesos CGI)
+   # Delete file
+   curl -i -X DELETE http://localhost:8080/upload/data.txt
+   ```
 
-#### CgiExecutor.hpp
-* **Clase:** `CgiExecutor` (Hereda de `IMethodExecutor`)
-* **Descripción:** Ejecutor dinámico que lanza el script CGI configurado mediante `fork` y `execve`, configurando variables de entorno estándar e inicializando tuberías no bloqueantes (`CgiReadHandler` y `CgiWriteHandler`).
+3. **CGI Execution**:
+   ```bash
+   curl -i http://localhost:8080/cgi-bin/hello.py
+   ```
 
-#### CgiReadHandler.hpp
-* **Clase:** `CgiReadHandler` (Hereda de `AEventHandler`)
-* **Descripción:** Manejador asíncrono para el pipe de lectura (stdout del proceso hijo) del CGI, recopilando su salida y cabeceras.
+4. **Official 42 Tester Suite**:
+   ```bash
+   ./tester/tester http://localhost:8000
+   ```
 
-#### CgiWriteHandler.hpp
-* **Clase:** `CgiWriteHandler` (Hereda de `AEventHandler`)
-* **Descripción:** Manejador asíncrono para el pipe de escritura (stdin del proceso hijo) del CGI, alimentando el cuerpo de la petición.
-
-### 6. Directorio inc/types/ (Tipados y Contextos)
-
-#### ConfigStructures.hpp
-* **Estructuras:** `LocationConfig`, `ServerConfig`, `ServerGroup`, `ConfigMap`
-* **Descripción:** Modelos de configuración del servidor. Soporta mapeo múltiple de CGIs (`cgi_handlers`), rutas de almacenamiento para subidas de archivos, y agrupación de servidores virtuales por puerto (`ServerGroup`).
-
-#### CgiStructures.hpp
-* **Estructura:** `CgiRequestContext`
-* **Descripción:** Encapsula el contexto y rutas resueltas durante el ciclo de vida de ejecución de una petición CGI.
+5. **Memory Leak Verification (Valgrind)**:
+   ```bash
+   valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./webserv config/default.conf
+   ```
 
 ---
 
-## Parte 4: Distribución de Tareas
+## Resources
 
-El reparto de responsabilidades se divide de manera balanceada de la siguiente forma:
+### Documentation & Standards
+- [RFC 2616 — Hypertext Transfer Protocol -- HTTP/1.1](https://datatracker.ietf.org/doc/html/rfc2616)
+- [RFC 3875 — The Common Gateway Interface (CGI) Version 1.1](https://datatracker.ietf.org/doc/html/rfc3875)
+- [Linux Programmer's Manual: epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html)
+- [Linux Programmer's Manual: fcntl(2)](https://man7.org/linux/man-pages/man2/fcntl.2.html)
+- [Linux Programmer's Manual: socket(2)](https://man7.org/linux/man-pages/man2/socket.2.html)
 
-### 1. Ruben - Infraestructura de Red, Sockets y Eventos
-* Desarrollo del bucle de eventos (`EpollManager.cpp`).
-* Implementación de la escucha pasiva y aceptación de sockets (`ServerHandler.cpp`).
-* Configuración no bloqueante de sockets (`fcntl` con `O_NONBLOCK` / `FD_CLOEXEC` / `F_SETFL`).
-* Gestión del ciclo de vida del socket del cliente en `ClientHandler.cpp` (callbacks `onReadReady` y `onWriteReady`, recepción y envíos parciales seguros, buffers `rawInBuffer_` y `rawOutBuffer_`).
-* Gestión segura de cierres de conexión y control de inactividad de descriptores (timeouts).
-* **(Infraestructura para Bonus):** Garantizar que `EpollManager` sea completamente genérico y dinámico (permitiendo registrar, modificar y eliminar cualquier clase que herede de `AEventHandler` de forma concurrente). Esto permite que el sistema soporte múltiples CGIs en paralelo nativamente sin que Ruben tenga que programar lógica de CGI.
-
-### 2. Alex - Parsers y Estructuras de Datos
-* Implementación del analizador sintáctico del archivo de configuración del servidor (`ConfigParser.cpp`).
-* **(Bonus - Múltiples CGIs):** Parseo y estructuración de múltiples mapeos CGI por extensión en los bloques de localización del archivo de configuración.
-* Desarrollo de la FSM del protocolo HTTP (`HttpParser.cpp`) con soporte para cuerpos normales e incremental chunked parsing.
-* Implementación de los objetos de transferencia de datos de solicitud y respuesta (`HttpRequest.cpp` e `HttpResponse.cpp`), con reciclaje lógico y limpieza de buffers.
-* **(Bonus - Cookies/Sesiones):** Parseo sintáctico de la cabecera `Cookie` en `HttpRequest` y método de inyección/serialización de cabeceras `Set-Cookie` en `HttpResponse`.
-
-### 3. Angel - Enrutamiento, CGI y Cookies/Sesiones
-* Enrutamiento de peticiones por host y coincidencia de prefijos en URI (`Router.cpp`).
-* Integración no bloqueante de procesos CGI mediante lectura/escritura asíncrona en pipes registradas en el multiplexor (`CgiExecutor.cpp`, `CgiReadHandler.cpp` y `CgiWriteHandler.cpp`).
-* **(Bonus - Múltiples CGIs):** Control simultáneo de procesos CGI activos (`fork`, `execve`, y reap no bloqueante con `waitpid` y flag `WNOHANG`), gestionando de forma independiente múltiples procesos y tuberías activas por cliente.
-* **(Bonus - Cookies/Sesiones):** Diseño y desarrollo de la clase `SessionManager` (base de datos en memoria para sesiones) y validación/control de acceso por sesión en el enrutamiento.
-
----
-
-### Tabla General de Reparto del Proyecto (Incluido Bonus)
-
-| Módulo / Requisito | Ruben (Red y Eventos) | Alex (Parsers y DTOs) | Angel (Enrutado y CGI) |
-| :--- | :--- | :--- | :--- |
-| **Multiplexor de Eventos** | Bucle central de eventos en [EpollManager](inc/core/EpollManager.hpp) e interfaz base [AEventHandler](inc/core/AEventHandler.hpp). | Ninguno. | Registro indirecto de descriptores polimórficos. |
-| **Sockets y Conectividad** | Creación y configuración de socket de escucha en [ServerHandler](inc/core/ServerHandler.hpp), `accept` no bloqueante. | Ninguno. | Ninguno. |
-| **I/O Físico del Cliente** | Gestión del descriptor del cliente en [ClientHandler](inc/core/ClientHandler.hpp), buffers de red raw y **envíos parciales** seguros. | Reciclaje lógico de buffers. | Ninguno. |
-| **Archivo de Configuración** | Ninguno. | Analizador sintáctico completo en `ConfigParser.cpp` y estructurado de datos. | Ninguno. |
-| **Protocolo HTTP (Core)** | Ninguno. | Parser incremental FSM en [HttpParser](inc/http/HttpParser.hpp), DTOs [HttpRequest](inc/http/HttpRequest.hpp) y [HttpResponse](inc/http/HttpResponse.hpp). | Ninguno. |
-| **Enrutamiento y Lógica** | Ninguno. | Ninguno. | Selección de servidores virtuales y locations en [Router](inc/router/Router.hpp), y verbos HTTP vía [IMethodExecutor](inc/methods/IMethodExecutor.hpp). |
-| **Ejecución CGI (Core + Bonus)** | Multiplexa los fds de pipes de forma transparente usando `AEventHandler`. | **(Bonus):** Parsea múltiples asociaciones CGI por extensión desde la configuración. | **(Bonus):** Lógica de CGI asíncrona en [CgiExecutor](inc/cgi/CgiExecutor.hpp), [CgiReadHandler](inc/cgi/CgiReadHandler.hpp) y [CgiWriteHandler](inc/cgi/CgiWriteHandler.hpp), control de procesos y tuberías concurrentes. |
-| **Cookies y Sesiones (Bonus)** | Soporte pasivo en sockets para flujos con estado. | **(Bonus):** Parseo de cabeceras `Cookie` y formateador de `Set-Cookie` en la capa HTTP. | **(Bonus):** Lógica del gestor de sesiones en memoria (`SessionManager`) y control de acceso. |
-
+### AI Usage Disclosure
+In accordance with Chapter III ("AI Instructions") of the 42 Common Core curriculum:
+- **AI Tool**: Antigravity / Gemini DeepMind AI Coding Assistant.
+- **Scope of AI Assistance**: Assisted with system architecture auditing, reproducing subtle non-blocking pipe edge-cases (Linux `EPOLLHUP`/`EAGAIN` nuances during high-volume transfers), identifying memory move bottlenecks in large response serialization, and reviewing POSIX/C++98 conformance.
+- **Verification & Ownership**: All logic, concurrency flows, and data structures were audited, understood, and validated using Valgrind, custom test requests, and the 42 official tester suite.

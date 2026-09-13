@@ -113,7 +113,28 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
   if (root.size() > 1 && root[root.size() - 1] == '/') {
     root.erase(root.size() - 1);
   }
-  std::string filePath = root + req.getPath();
+  std::string relPath = req.getPath();
+  std::string locPrefix = location.path;
+  if (!locPrefix.empty()) {
+    if (relPath.compare(0, locPrefix.size(), locPrefix) == 0) {
+      relPath = relPath.substr(locPrefix.size());
+    } else if (locPrefix[locPrefix.size() - 1] == '/' && (relPath + "/").compare(0, locPrefix.size(), locPrefix) == 0) {
+      relPath = "";
+    }
+  }
+  if (!relPath.empty() && relPath[0] != '/') {
+    relPath = "/" + relPath;
+  }
+  std::string filePath = root + relPath;
+  if (location.upload_enable && !location.upload_store.empty()) {
+    std::string uploadPath = location.upload_store + relPath;
+    if (access(uploadPath.c_str(), F_OK) == 0) {
+      filePath = uploadPath;
+    }
+  }
+  if (filePath.empty()) {
+    filePath = ".";
+  }
 
   if (access(filePath.c_str(), F_OK) != 0) {
     res.setStatusCode(404);
@@ -158,13 +179,17 @@ void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandle
         serveFile(indexPath, res);
         return;
       }
+      res.setStatusCode(404);
+      return;
     }
 
     if (location.autoindex) {
       generateAutoindex(filePath, req.getPath(), res);
       return;
     }
+    res.setStatusCode(404);
+    return;
   }
 
-  res.setStatusCode(403);
+  res.setStatusCode(404);
 }

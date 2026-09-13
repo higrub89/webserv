@@ -68,12 +68,23 @@ void EpollManager::run() {
 
       AEventHandler* handler = handlers_[fd];
 
-      if (revents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
-        handler->onDisconnect();
-      else if (revents & EPOLLIN)
+      if (revents & EPOLLIN) {
         handler->onReadReady();
-      else if (revents & EPOLLOUT)
+      }
+
+      if (handlers_.count(fd) == 0)
+        continue;
+
+      if (revents & EPOLLOUT) {
         handler->onWriteReady();
+      }
+
+      if (handlers_.count(fd) == 0)
+        continue;
+
+      if (!(revents & EPOLLIN) && (revents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))) {
+        handler->onDisconnect();
+      }
     }
 
     cleanupTimeouts();
@@ -118,15 +129,16 @@ void EpollManager::removeHandler(AEventHandler* handler) {
 
 void EpollManager::cleanupTimeouts() {
   time_t now = std::time(NULL);
-  std::vector<AEventHandler*> expired;
+  std::vector<int> expiredFds;
 
   for (std::map<int, AEventHandler*>::iterator it = handlers_.begin(); it != handlers_.end(); ++it) {
     if (it->second->isTimedOut(now))
-      expired.push_back(it->second);
+      expiredFds.push_back(it->first);
   }
 
-  for (size_t i = 0; i < expired.size(); ++i) {
-    if (handlers_.count(expired[i]->getFd()) > 0)
-      expired[i]->onDisconnect();
+  for (size_t i = 0; i < expiredFds.size(); ++i) {
+    std::map<int, AEventHandler*>::iterator it = handlers_.find(expiredFds[i]);
+    if (it != handlers_.end())
+      it->second->onDisconnect();
   }
 }

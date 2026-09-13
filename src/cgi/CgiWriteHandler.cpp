@@ -1,6 +1,7 @@
 #include "CgiWriteHandler.hpp"
 
 #include <unistd.h>
+#include <cerrno>
 
 #include "ClientHandler.hpp"
 #include "EpollManager.hpp"
@@ -29,9 +30,17 @@ void CgiWriteHandler::onWriteReady() {
 
     if (written > 0) {
       bytesWritten_ += written;
-    } else {
-      // written <= 0: write error (e.g. EPIPE, CGI stdin closed prematurely)
-      onDisconnect();
+    } else if (written < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        return;
+      }
+      // Pipe broken (EPIPE) or other error: CGI closed stdin or exited.
+      // Unregister handler and close pipe without aborting the client.
+      epollManager_.removeHandler(this);
+      if (fd_ != -1) {
+        close(fd_);
+        fd_ = -1;
+      }
       return;
     }
   }
@@ -53,5 +62,4 @@ void CgiWriteHandler::onDisconnect() {
     close(fd_);
     fd_ = -1;
   }
-  client_.handleCgiError();
 }
