@@ -40,7 +40,23 @@ void CgiExecutor::parseUri(CgiRequestContext& ctx) {
 }
 
 bool CgiExecutor::resolveAndValidatePaths(CgiRequestContext& ctx, const LocationConfig& location) {
-  ctx.script_path = location.root_dir + ctx.script_name;
+  std::string root = location.root_dir;
+  if (root.size() > 1 && root[root.size() - 1] == '/') {
+    root.erase(root.size() - 1);
+  }
+  std::string relPath = ctx.script_name;
+  std::string locPrefix = location.path;
+  if (!locPrefix.empty()) {
+    if (relPath.compare(0, locPrefix.size(), locPrefix) == 0) {
+      relPath = relPath.substr(locPrefix.size());
+    } else if (locPrefix[locPrefix.size() - 1] == '/' && (relPath + "/").compare(0, locPrefix.size(), locPrefix) == 0) {
+      relPath = "";
+    }
+  }
+  if (!relPath.empty() && relPath[0] != '/') {
+    relPath = "/" + relPath;
+  }
+  ctx.script_path = root + relPath;
   std::string ext = Utils::getExtension(ctx.req.getUri());
   ctx.interpreter_path = "";
 
@@ -56,13 +72,6 @@ bool CgiExecutor::resolveAndValidatePaths(CgiRequestContext& ctx, const Location
     return false;
   }
 
-  if (access(ctx.script_path.c_str(), F_OK) == -1) {
-    Logger::error("CGI script not found: " + ctx.script_path);
-    ctx.res.setStatusCode(404, "Not Found");
-    ctx.client->changeState(ClientHandler::WRITING_RESPONSE);
-    return false;
-  }
-
   if (access(ctx.interpreter_path.c_str(), X_OK) == -1) {
     Logger::error("CGI interpreter not executable or not found: " + ctx.interpreter_path);
     ctx.res.setStatusCode(500, "Internal Server Error");
@@ -70,7 +79,7 @@ bool CgiExecutor::resolveAndValidatePaths(CgiRequestContext& ctx, const Location
     return false;
   }
 
-  if (access(ctx.script_path.c_str(), R_OK) == -1) {
+  if (access(ctx.script_path.c_str(), F_OK) == 0 && access(ctx.script_path.c_str(), R_OK) == -1) {
     Logger::error("CGI script not readable: " + ctx.script_path);
     ctx.res.setStatusCode(403, "Forbidden");
     ctx.client->changeState(ClientHandler::WRITING_RESPONSE);
@@ -115,6 +124,22 @@ void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_p
   }
   close(out_pipe[1]);
 
+  std::string abs_interpreter = ctx.interpreter_path;
+  if (!abs_interpreter.empty() && abs_interpreter[0] != '/') {
+    std::string pwd = "";
+    if (envp_) {
+      for (int i = 0; envp_[i] != NULL; ++i) {
+        if (std::strncmp(envp_[i], "PWD=", 4) == 0) {
+          pwd = envp_[i] + 4;
+          break;
+        }
+      }
+    }
+    if (!pwd.empty()) {
+      abs_interpreter = pwd + "/" + abs_interpreter;
+    }
+  }
+
   std::string script_filename = ctx.script_path;
   size_t last_slash = ctx.script_path.find_last_of('/');
   if (last_slash != std::string::npos) {
@@ -127,7 +152,7 @@ void CgiExecutor::executeChild(CgiRequestContext& ctx, int in_pipe[2], int out_p
   }
 
   char* argv[3];
-  argv[0] = const_cast<char*>(ctx.interpreter_path.c_str());
+  argv[0] = const_cast<char*>(abs_interpreter.c_str());
   argv[1] = const_cast<char*>(script_filename.c_str());
   argv[2] = NULL;
 
@@ -180,6 +205,8 @@ std::vector<char*> CgiExecutor::buildChildEnv(CgiRequestContext& ctx, std::vecto
   env_strings.push_back("REQUEST_METHOD=" + ctx.req.getMethod());
   env_strings.push_back("SCRIPT_NAME=" + ctx.script_name);
   env_strings.push_back("SCRIPT_FILENAME=" + ctx.script_path);
+  env_strings.push_back("PATH_INFO=" + ctx.script_name);
+  env_strings.push_back("PATH_TRANSLATED=" + ctx.script_path);
   env_strings.push_back("QUERY_STRING=" + ctx.query_string);
   env_strings.push_back("REQUEST_URI=" + ctx.req.getUri());
 
@@ -192,16 +219,16 @@ std::vector<char*> CgiExecutor::buildChildEnv(CgiRequestContext& ctx, std::vecto
     const std::string& key = it_h->first;
     const std::string& value = it_h->second;
 
-    if (key == "Host") {
+    if (key == "host") {
       server_name = value;
       size_t colon = server_name.find(':');
       if (colon != std::string::npos) {
         server_name = server_name.substr(0, colon);
       }
       env_strings.push_back("HTTP_HOST=" + value);
-    } else if (key == "Content-Length") {
+    } else if (key == "content-length") {
       content_length = value;
-    } else if (key == "Content-Type") {
+    } else if (key == "content-type") {
       content_type = value;
     } else {
       env_strings.push_back("HTTP_" + Utils::toHeaderEnvKey(key) + "=" + value);

@@ -17,14 +17,29 @@ void populate(HttpResponse& res, int errorCode, const ServerConfig& server) {
   std::map<int, std::string>::const_iterator it = server.error_pages.find(errorCode);
   if (it != server.error_pages.end()) {
     const std::string& errorPagePath = it->second;
-    std::ifstream errorPageFile(errorPagePath.c_str(), std::ios::binary);
+    std::string fullPath = errorPagePath;
+    std::ifstream errorPageFile(fullPath.c_str(), std::ios::binary);
+    if (!errorPageFile.is_open()) {
+      std::string root = server.root_dir;
+      if (root.empty()) {
+        root = ".";
+      }
+      if (root[root.length() - 1] == '/' && !errorPagePath.empty() && errorPagePath[0] == '/') {
+        fullPath = root + errorPagePath.substr(1);
+      } else if (root[root.length() - 1] != '/' && !errorPagePath.empty() && errorPagePath[0] != '/') {
+        fullPath = root + "/" + errorPagePath;
+      } else {
+        fullPath = root + errorPagePath;
+      }
+      errorPageFile.open(fullPath.c_str(), std::ios::binary);
+    }
     if (errorPageFile.is_open()) {
       std::stringstream buffer;
       buffer << errorPageFile.rdbuf();
       res.setBody(buffer.str());
       return;
     } else {
-      Logger::info("Custom error page not found or unreadable: " + errorPagePath);
+      Logger::info("Custom error page not found or unreadable: " + fullPath);
     }
   }
 

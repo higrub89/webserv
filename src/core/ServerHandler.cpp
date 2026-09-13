@@ -16,7 +16,8 @@
 
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
-ServerHandler::ServerHandler(int port, const ServerConfig& config, EpollManager& epoll_manager, Router& router) : AEventHandler(-1), config_(config), epollManager_(epoll_manager), router_(router), port_(port) {
+ServerHandler::ServerHandler(const std::string& ip, int port, const ServerConfig& config, EpollManager& epoll_manager, Router& router)
+  : AEventHandler(-1), config_(config), epollManager_(epoll_manager), router_(router), ip_(ip), port_(port) {
   std::memset(&address_, 0, sizeof(address_));
 }
 
@@ -44,18 +45,24 @@ void ServerHandler::setup() {
 
   address_.sin_family = AF_INET;
   address_.sin_port = htons(port_);
-  address_.sin_addr.s_addr = INADDR_ANY;
+  if (ip_.empty() || ip_ == "0.0.0.0") {
+    address_.sin_addr.s_addr = INADDR_ANY;
+  } else {
+    if (inet_pton(AF_INET, ip_.c_str(), &address_.sin_addr) <= 0) {
+      throw std::runtime_error("Invalid IP address for bind: " + ip_);
+    }
+  }
 
   if (bind(fd_, (struct sockaddr*)&address_, sizeof(address_)) < 0) {
     std::ostringstream oss;
-    oss << "bind() failed on port " << port_ << ": " << strerror(errno);
+    oss << "bind() failed on " << (ip_.empty() ? "0.0.0.0" : ip_) << ":" << port_ << ": " << strerror(errno);
     throw std::runtime_error(oss.str());
   }
 
   if (listen(fd_, SOMAXCONN) < 0)
     throw std::runtime_error(std::string("listen() failed: ") + strerror(errno));
 
-  std::cout << "[INFO]  Listening on 0.0.0.0:" << port_ << " (fd=" << fd_ << ")" << std::endl;
+  std::cout << "[INFO]  Listening on " << (ip_.empty() ? "0.0.0.0" : ip_) << ":" << port_ << " (fd=" << fd_ << ")" << std::endl;
 }
 
 // ─── Aceptar conexiones (loop hasta EAGAIN) ─────────────────────────────────

@@ -12,6 +12,10 @@ HttpParser::HttpParser(size_t max_body_size)
 HttpParser::~HttpParser() {
 }
 
+void HttpParser::setMaxBodySize(size_t max_body_size) {
+  clientMaxBodySize_ = max_body_size;
+}
+
 void HttpParser::reset() {
   state_ = STATE_REQUEST_LINE;
   errorCode_ = 0;
@@ -66,6 +70,7 @@ bool HttpParser::readLine(const std::vector<char>& buffer, size_t& pos, std::str
     ++pos;
   }
   if (pos >= buffer.size()) {
+    pos = start;
     return false;
   }
 
@@ -152,7 +157,7 @@ bool HttpParser::handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req) 
     if (line.empty()) {
       raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
 
-      if (req.getHeaders().find("host") == req.getHeaders().end()) {
+      if (req.getVersion() == "HTTP/1.1" && req.getHeaders().find("host") == req.getHeaders().end()) {
         state_ = STATE_ERROR;
         errorCode_ = 400;
         return false;
@@ -161,10 +166,18 @@ bool HttpParser::handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req) 
       req.parseCookies();
 
       std::map<std::string, std::string>::const_iterator connIt = req.getHeaders().find("connection");
-      if (connIt != req.getHeaders().end() && Utils::equalsIgnoreCase(connIt->second, "close")) {
-        req.setKeepAlive(false);
+      if (req.getVersion() == "HTTP/1.0") {
+        if (connIt != req.getHeaders().end() && Utils::equalsIgnoreCase(connIt->second, "keep-alive")) {
+          req.setKeepAlive(true);
+        } else {
+          req.setKeepAlive(false);
+        }
       } else {
-        req.setKeepAlive(true);
+        if (connIt != req.getHeaders().end() && Utils::equalsIgnoreCase(connIt->second, "close")) {
+          req.setKeepAlive(false);
+        } else {
+          req.setKeepAlive(true);
+        }
       }
 
       return resolveBodyType(req);
@@ -186,10 +199,9 @@ bool HttpParser::handleHeaders(std::vector<char>& raw_buffer, HttpRequest& req) 
     headerName = Utils::toLowerCase(Utils::trim(headerName));
     std::string headerValue = Utils::trim(line.substr(colonPos + 1));
     req.addHeader(headerName, headerValue);
-  }
 
-  if (pos > 0) {
     raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + pos);
+    pos = 0;
   }
   return false;
 }

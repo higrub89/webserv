@@ -37,7 +37,10 @@ SRCS := \
 	$(SRC_DIR)/http/HttpRequest.cpp \
 	$(SRC_DIR)/http/HttpResponse.cpp \
 	$(SRC_DIR)/methods/GetExecutor.cpp \
-	$(SRC_DIR)/router/Router.cpp
+	$(SRC_DIR)/methods/PostExecutor.cpp \
+	$(SRC_DIR)/methods/DeleteExecutor.cpp \
+	$(SRC_DIR)/router/Router.cpp \
+	$(SRC_DIR)/router/SessionManager.cpp
 
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)

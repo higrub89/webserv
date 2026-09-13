@@ -5,9 +5,11 @@
 
 #include "CgiExecutor.hpp"
 #include "ConfigParser.hpp"
+#include "DeleteExecutor.hpp"
 #include "EpollManager.hpp"
 #include "GetExecutor.hpp"
 #include "Logger.hpp"
+#include "PostExecutor.hpp"
 #include "Router.hpp"
 #include "ServerHandler.hpp"
 #include "types/ConfigStructures.hpp"
@@ -42,6 +44,8 @@ int main(int argc, char* argv[], char* envp[]) {
     // ── Crear componentes ───────────────────────────────────────────
     Router router(configMap, envp);
     router.registerMethodExecutor("GET", new GetExecutor());
+    router.registerMethodExecutor("POST", new PostExecutor());
+    router.registerMethodExecutor("DELETE", new DeleteExecutor());
     router.registerMethodExecutor("CGI", new CgiExecutor(envp));
 
     EpollManager epoll;
@@ -52,7 +56,7 @@ int main(int argc, char* argv[], char* envp[]) {
     // NOTA(Ruben): ServerHandler aún bindea solo por puerto; el bind por
     // IP del grupo (decisión #17) queda pendiente en su constructor.
     for (ConfigMap::const_iterator it = configMap.begin(); it != configMap.end(); ++it) {
-      ServerHandler* server = new ServerHandler(it->second.port, it->second.servers[0], epoll, router);
+      ServerHandler* server = new ServerHandler(it->second.ip, it->second.port, it->second.servers[0], epoll, router);
       server->setup();
       epoll.addHandler(server, EPOLLIN);
     }

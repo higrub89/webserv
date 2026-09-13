@@ -40,6 +40,7 @@ private:
 
   std::vector<char> rawInBuffer_;
   std::vector<char> rawOutBuffer_;
+  size_t rawOutBufferOffset_;
 
   HttpParser parser_;
   HttpRequest request_;

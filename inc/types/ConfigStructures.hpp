@@ -10,6 +10,7 @@
  * @brief Configuration directives for a specific URI location route.
  */
 struct LocationConfig {
+  std::string path;
   std::vector<std::string> allowed_methods;
   std::string root_dir;
   bool autoindex;

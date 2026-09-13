@@ -11,9 +11,10 @@
 #include "CgiWriteHandler.hpp"
 #include "EpollManager.hpp"
 #include "Router.hpp"
+#include <iostream>
 
 #define CLIENT_TIMEOUT_SECS 60
-#define READ_BUF_SIZE 8192
+#define READ_BUF_SIZE 65536
 
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
@@ -23,8 +24,8 @@ ClientHandler::ClientHandler(int fd, EpollManager& epoll_manager, Router& router
     router_(router),
     state_(READING_REQUEST),
     lastActivityTime_(std::time(NULL)),
-    parser_(10485760),  // Initialize parser with a default max body size of
-                        // 10MB (TODO)
+    rawOutBufferOffset_(0),
+    parser_(router_.getMaxBodySizeForPort(server_port)),
     serverPort_(server_port),
     clientIp_(client_ip),
     cgiReadHandler_(NULL),
@@ -76,16 +77,18 @@ void ClientHandler::onReadReady() {
 // ─── onWriteReady: UNA sola llamada a send() ────────────────────────────────
 
 void ClientHandler::onWriteReady() {
-  if (rawOutBuffer_.empty())
+  if (rawOutBufferOffset_ >= rawOutBuffer_.size())
     return;
 
-  ssize_t n = send(fd_, &rawOutBuffer_[0], rawOutBuffer_.size(), MSG_NOSIGNAL);
+  ssize_t n = send(fd_, &rawOutBuffer_[rawOutBufferOffset_], rawOutBuffer_.size() - rawOutBufferOffset_, MSG_NOSIGNAL);
 
   if (n > 0) {
-    rawOutBuffer_.erase(rawOutBuffer_.begin(), rawOutBuffer_.begin() + n);
+    rawOutBufferOffset_ += n;
     lastActivityTime_ = std::time(NULL);
 
-    if (rawOutBuffer_.empty()) {
+    if (rawOutBufferOffset_ >= rawOutBuffer_.size()) {
+      rawOutBuffer_.clear();
+      rawOutBufferOffset_ = 0;
       if (request_.isKeepAlive())
         resetForKeepAlive();
       else
@@ -120,22 +123,47 @@ void ClientHandler::processRequest() {
 // ─── resetForKeepAlive ──────────────────────────────────────────────────────
 
 void ClientHandler::resetForKeepAlive() {
-  rawInBuffer_.clear();
   rawOutBuffer_.clear();
+  rawOutBufferOffset_ = 0;
   parser_.reset();
   request_.reset();
   response_.reset();
   lastActivityTime_ = std::time(NULL);
   changeState(READING_REQUEST);
+
+  if (!rawInBuffer_.empty()) {
+    bool complete = parser_.consume(rawInBuffer_, request_);
+    if (complete) {
+      processRequest();
+    } else if (parser_.getState() == HttpParser::STATE_ERROR) {
+      const std::map<std::string, std::string>& headers = request_.getHeaders();
+      std::map<std::string, std::string>::const_iterator it = headers.find("host");
+      if (it != headers.end()) {
+        router_.setErrorResponse(response_, parser_.getErrorCode(), it->second, serverPort_);
+      } else {
+        router_.setErrorResponse(response_, parser_.getErrorCode(), "", serverPort_);
+      }
+      appendToOutput(response_.serialize());
+      changeState(WRITING_RESPONSE);
+    }
+  }
 }
 
 // ─── Utilidades ─────────────────────────────────────────────────────────────
 
 void ClientHandler::appendToOutput(const std::vector<char>& data) {
+  if (rawOutBufferOffset_ > 0 && rawOutBufferOffset_ == rawOutBuffer_.size()) {
+    rawOutBuffer_.clear();
+    rawOutBufferOffset_ = 0;
+  }
   rawOutBuffer_.insert(rawOutBuffer_.end(), data.begin(), data.end());
 }
 
 void ClientHandler::appendToOutput(const char* data, size_t len) {
+  if (rawOutBufferOffset_ > 0 && rawOutBufferOffset_ == rawOutBuffer_.size()) {
+    rawOutBuffer_.clear();
+    rawOutBufferOffset_ = 0;
+  }
   rawOutBuffer_.insert(rawOutBuffer_.end(), data, data + len);
 }
 
@@ -179,6 +207,7 @@ void ClientHandler::clearCgi() {
 
 void ClientHandler::handleCgiError() {
   rawOutBuffer_.clear();
+  rawOutBufferOffset_ = 0;
 
   clearCgi();
 
