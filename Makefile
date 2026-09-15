@@ -39,8 +39,11 @@ SRCS := \
 	$(SRC_DIR)/methods/GetExecutor.cpp \
 	$(SRC_DIR)/methods/PostExecutor.cpp \
 	$(SRC_DIR)/methods/DeleteExecutor.cpp \
+	$(SRC_DIR)/methods/IMethodExecutor.cpp \
 	$(SRC_DIR)/router/Router.cpp \
-	$(SRC_DIR)/router/SessionManager.cpp
+	$(SRC_DIR)/router/SessionManager.cpp \
+	$(SRC_DIR)/types/CgiStructures.cpp \
+	$(SRC_DIR)/types/ConfigStructures.cpp
 
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
