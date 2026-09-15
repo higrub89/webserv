@@ -10,8 +10,12 @@
  * @brief Holds authentication and timestamp state for an active client session.
  */
 struct SessionData {
-  std::string username;
+  std::string clientIp;
+  size_t visitCount;
+  time_t createdAt;
   time_t lastActivityTime;
+
+  SessionData();
 };
 
 /**
@@ -33,10 +37,11 @@ public:
   SessionManager(time_t timeoutInSeconds = 1800);
   ~SessionManager();
 
-  std::string createSession(const std::string& username);
+  std::string createSession(const std::string& clientIp);
   bool getSession(const std::string& sessionId, SessionData& outData);
   void destroySession(const std::string& sessionId);
   void cleanExpiredSessions();
+  size_t getActiveSessionCount() const;
 };
 
 #endif  // SESSIONMANAGER_HPP_

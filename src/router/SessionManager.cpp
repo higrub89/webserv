@@ -4,6 +4,10 @@
 #include <ctime>
 #include <vector>
 
+SessionData::SessionData()
+  : clientIp(""), visitCount(0), createdAt(0), lastActivityTime(0) {
+}
+
 SessionManager::SessionManager(time_t timeoutInSeconds) : sessionTimeout_(timeoutInSeconds) {
 }
 
@@ -22,15 +26,17 @@ std::string SessionManager::generateSessionId() const {
   return id;
 }
 
-std::string SessionManager::createSession(const std::string& username) {
+std::string SessionManager::createSession(const std::string& clientIp) {
   cleanExpiredSessions();
   std::string id = generateSessionId();
   while (activeSessions_.find(id) != activeSessions_.end()) {
     id = generateSessionId();
   }
   SessionData data;
-  data.username = username;
-  data.lastActivityTime = std::time(NULL);
+  data.clientIp = clientIp;
+  data.visitCount = 1;
+  data.createdAt = std::time(NULL);
+  data.lastActivityTime = data.createdAt;
   activeSessions_[id] = data;
   return id;
 }
@@ -41,6 +47,7 @@ bool SessionManager::getSession(const std::string& sessionId, SessionData& outDa
   if (it == activeSessions_.end()) {
     return false;
   }
+  it->second.visitCount++;
   it->second.lastActivityTime = std::time(NULL);
   outData = it->second;
   return true;
@@ -62,4 +69,8 @@ void SessionManager::cleanExpiredSessions() {
   for (size_t i = 0; i < expired.size(); ++i) {
     activeSessions_.erase(expired[i]);
   }
+}
+
+size_t SessionManager::getActiveSessionCount() const {
+  return activeSessions_.size();
 }
