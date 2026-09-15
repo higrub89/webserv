@@ -6,12 +6,12 @@
 
 #include <cerrno>
 #include <cstring>
+#include <iostream>
 
 #include "CgiReadHandler.hpp"
 #include "CgiWriteHandler.hpp"
 #include "EpollManager.hpp"
 #include "Router.hpp"
-#include <iostream>
 
 #define CLIENT_TIMEOUT_SECS 60
 #define READ_BUF_SIZE 65536
@@ -221,4 +221,24 @@ void ClientHandler::handleCgiError() {
 
   appendToOutput(response_.serialize());
   changeState(WRITING_RESPONSE);
+}
+
+ClientHandler::ClientState ClientHandler::getState() const {
+  return state_;
+}
+
+EpollManager& ClientHandler::getEpollManager() const {
+  return epollManager_;
+}
+
+Router& ClientHandler::getRouter() const {
+  return router_;
+}
+
+int ClientHandler::getServerPort() const {
+  return serverPort_;
+}
+
+const std::string& ClientHandler::getClientIp() const {
+  return clientIp_;
 }

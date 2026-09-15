@@ -75,13 +75,13 @@ public:
   void appendToOutput(const char* data, size_t len);
 
   void changeState(ClientState new_state);
-  ClientState getState() const { return state_; }
+  ClientState getState() const;
   bool isTimedOut(time_t current_time) const;
 
-  EpollManager& getEpollManager() const { return epollManager_; }
-  Router& getRouter() const { return router_; }
-  int getServerPort() const { return serverPort_; }
-  const std::string& getClientIp() const { return clientIp_; }
+  EpollManager& getEpollManager() const;
+  Router& getRouter() const;
+  int getServerPort() const;
+  const std::string& getClientIp() const;
 
   void registerCgi(pid_t pid, CgiReadHandler* read_h, CgiWriteHandler* write_h);
   void clearCgi();

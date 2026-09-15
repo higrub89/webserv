@@ -94,6 +94,16 @@ bool isDigits(const std::string& str);
 std::string normalizeUriPath(const std::string& path);
 
 /**
+ * @brief Resolves a request URI against a location route path and root directory.
+ * Strips the route prefix from the URI and joins the remaining path with the root directory.
+ * @param uri The incoming request URI.
+ * @param route_path The location route path (e.g., "/directory/").
+ * @param root_dir The filesystem root directory.
+ * @return The resolved filesystem path.
+ */
+std::string resolvePath(const std::string& uri, const std::string& route_path, const std::string& root_dir);
+
+/**
  * @brief Converts any streamable value to std::string (C++98 alternative to std::to_string).
  * @param val The value to convert.
  * @return The string representation of val.

@@ -7,12 +7,13 @@
 
 #include <cerrno>
 #include <cstring>
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
 #include "ClientHandler.hpp"
 #include "EpollManager.hpp"
+#include "Logger.hpp"
+#include "Utils.hpp"
 
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
@@ -53,16 +54,21 @@ void ServerHandler::setup() {
     }
   }
 
+  std::string bindIp = ip_;
+  if (bindIp.empty()) {
+    bindIp = "0.0.0.0";
+  }
+
   if (bind(fd_, (struct sockaddr*)&address_, sizeof(address_)) < 0) {
     std::ostringstream oss;
-    oss << "bind() failed on " << (ip_.empty() ? "0.0.0.0" : ip_) << ":" << port_ << ": " << strerror(errno);
+    oss << "bind() failed on " << bindIp << ":" << port_ << ": " << strerror(errno);
     throw std::runtime_error(oss.str());
   }
 
   if (listen(fd_, SOMAXCONN) < 0)
     throw std::runtime_error(std::string("listen() failed: ") + strerror(errno));
 
-  std::cout << "[INFO]  Listening on " << (ip_.empty() ? "0.0.0.0" : ip_) << ":" << port_ << " (fd=" << fd_ << ")" << std::endl;
+  Logger::info("Listening on " + bindIp + ":" + Utils::toString(port_) + " (fd=" + Utils::toString(fd_) + ")");
 }
 
 // ─── Aceptar conexiones (loop hasta EAGAIN) ─────────────────────────────────
@@ -76,23 +82,25 @@ void ServerHandler::onReadReady() {
     if (clientFd < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK)
         break;
-      std::cerr << "[ERROR] accept(): " << strerror(errno) << std::endl;
+      Logger::error(std::string("accept(): ") + strerror(errno));
       break;
     }
 
     if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) {
-      std::cerr << "[ERROR] fcntl client fd: " << strerror(errno) << std::endl;
+      Logger::error(std::string("fcntl client fd: ") + strerror(errno));
       close(clientFd);
       continue;
     }
     if (fcntl(clientFd, F_SETFD, FD_CLOEXEC) < 0) {
-      std::cerr << "[ERROR] fcntl client fd: " << strerror(errno) << std::endl;
+      Logger::error(std::string("fcntl client fd: ") + strerror(errno));
       close(clientFd);
       continue;
     }
 
-    ClientHandler* client = new ClientHandler(clientFd, epollManager_, router_, port_, std::string(inet_ntoa(clientAddr.sin_addr)));
+    std::string clientIp = std::string(inet_ntoa(clientAddr.sin_addr));
+    ClientHandler* client = new ClientHandler(clientFd, epollManager_, router_, port_, clientIp);
     epollManager_.addHandler(client, EPOLLIN | EPOLLRDHUP);
+    Logger::info("New client connection accepted from " + clientIp + " (fd=" + Utils::toString(clientFd) + ")");
   }
 }
 
@@ -100,5 +108,5 @@ void ServerHandler::onWriteReady() {
 }
 
 void ServerHandler::onDisconnect() {
-  std::cerr << "[ERROR] Listening socket error on fd=" << fd_ << std::endl;
+  Logger::error("Listening socket error on fd=" + Utils::toString(fd_));
 }
