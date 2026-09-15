@@ -37,7 +37,7 @@
   - Concurrent non-blocking pipe writing (request body feeding) and reading (response streaming) without deadlocks or buffer truncation.
 
 - **Bonus Modules**:
-  - **Session & Cookie Manager (`SessionManager`)**: In-memory session store generating 32-character secure alphanumeric tokens with automatic expiration sweeps.
+  - **Session & Cookie Manager (`SessionManager`)**: In-memory session store generating 32-character secure alphanumeric tokens (`session_id`) with visit counting, client IP tracking, automatic expiration sweeps, and HTTP `Set-Cookie` integration.
   - **Multi-CGI Support**: Independent handler mappings per file extension.
 
 ---

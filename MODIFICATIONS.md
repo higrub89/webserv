@@ -107,11 +107,18 @@ Este documento detalla todas las modificaciones, correcciones de errores crític
 
 ---
 
-## 5. Módulo Bonus de Sesiones (`src/router/SessionManager.cpp`)
+## 5. Módulo Bonus de Sesiones y Cookies (`SessionManager` y `Router`)
 
-* Implementada la clase declarada en `inc/router/SessionManager.hpp`.
-* Generación de identificadores de sesión alfanuméricos pseudoaleatorios de 32 caracteres.
-* Almacenamiento en memoria con sellos de tiempo (`lastActivityTime`), recuperación de sesiones y limpieza periódica de sesiones caducadas según el tiempo de expiración configurado.
+* **Estructura de datos (`SessionData`)**: Registra en memoria la IP del cliente (`clientIp`), número de visitas (`visitCount`), marca de creación (`createdAt`) y marca de última actividad (`lastActivityTime`).
+* **Ciclo de vida en memoria (`SessionManager`)**:
+  - Generación de identificadores de sesión alfanuméricos pseudoaleatorios de 32 caracteres.
+  - Almacenamiento en memoria no bloqueante (`std::map<std::string, SessionData>`).
+  - Recuperación de sesiones (`getSession`), incremento automático del contador de visitas y actualización de actividad.
+  - Limpieza periódica de sesiones expiradas por inactividad (`cleanExpiredSessions`).
+* **Integración con HTTP (`Router::dispatch`)**:
+  - Extracción transparente de la cookie `session_id` desde `HttpRequest::getCookies()`.
+  - En peticiones sin sesión o caducadas: creación de nueva sesión y emisión de `Set-Cookie: session_id=...; Path=/; Max-Age=1800; HttpOnly` en `HttpResponse`.
+  - Registro informativo en tiempo real mediante `Logger::info` reportando el ID de sesión, IP del cliente, número de visitas y total de sesiones activas.
 
 ---
 
