@@ -144,4 +144,25 @@ std::string normalizeUriPath(const std::string& path) {
   return result;
 }
 
+std::string resolvePath(const std::string& uri, const std::string& route_path, const std::string& root_dir) {
+  std::string root = root_dir;
+  if (root.size() > 1 && root[root.size() - 1] == '/') {
+    root.erase(root.size() - 1);
+  }
+
+  std::string relPath = uri;
+  if (!route_path.empty()) {
+    if (relPath.compare(0, route_path.size(), route_path) == 0) {
+      relPath = relPath.substr(route_path.size());
+    } else if (route_path[route_path.size() - 1] == '/' && (relPath + "/").compare(0, route_path.size(), route_path) == 0) {
+      relPath = "";
+    }
+  }
+
+  if (!relPath.empty() && relPath[0] != '/') {
+    relPath = "/" + relPath;
+  }
+  return root + relPath;
+}
+
 }  // namespace Utils

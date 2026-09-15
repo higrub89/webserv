@@ -109,25 +109,9 @@ void GetExecutor::generateAutoindex(const std::string& dirPath, const std::strin
 
 void GetExecutor::handle(const HttpRequest& req, HttpResponse& res, ClientHandler* client, const LocationConfig& location) {
   (void)client;
-  std::string root = location.root_dir;
-  if (root.size() > 1 && root[root.size() - 1] == '/') {
-    root.erase(root.size() - 1);
-  }
-  std::string relPath = req.getPath();
-  std::string locPrefix = location.path;
-  if (!locPrefix.empty()) {
-    if (relPath.compare(0, locPrefix.size(), locPrefix) == 0) {
-      relPath = relPath.substr(locPrefix.size());
-    } else if (locPrefix[locPrefix.size() - 1] == '/' && (relPath + "/").compare(0, locPrefix.size(), locPrefix) == 0) {
-      relPath = "";
-    }
-  }
-  if (!relPath.empty() && relPath[0] != '/') {
-    relPath = "/" + relPath;
-  }
-  std::string filePath = root + relPath;
+  std::string filePath = Utils::resolvePath(req.getPath(), location.path, location.root_dir);
   if (location.upload_enable && !location.upload_store.empty()) {
-    std::string uploadPath = location.upload_store + relPath;
+    std::string uploadPath = Utils::resolvePath(req.getPath(), location.path, location.upload_store);
     if (access(uploadPath.c_str(), F_OK) == 0) {
       filePath = uploadPath;
     }
