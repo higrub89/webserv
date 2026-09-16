@@ -26,6 +26,7 @@ class SessionManager {
 private:
   std::map<std::string, SessionData> activeSessions_;
   time_t sessionTimeout_;  // Timeout duration in seconds
+  time_t lastCleanTime_;
 
   /**
    * @brief Generates a cryptographically-suitable random alphanumeric session token.

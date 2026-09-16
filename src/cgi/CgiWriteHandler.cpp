@@ -1,6 +1,7 @@
 #include "CgiWriteHandler.hpp"
 
 #include <unistd.h>
+
 #include <cerrno>
 
 #include "ClientHandler.hpp"
@@ -30,6 +31,7 @@ void CgiWriteHandler::onWriteReady() {
 
     if (written > 0) {
       bytesWritten_ += written;
+      client_.updateActivity();
     } else if (written < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;

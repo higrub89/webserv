@@ -22,7 +22,7 @@ static void signalHandler(int sig) {
 }
 
 int main(int argc, char* argv[], char* envp[]) {
-  if (argc > 2) {
+  if (argc != 2) {
     std::cerr << "Usage: ./webserv [config_file]" << std::endl;
     return 1;
   }
@@ -35,9 +35,7 @@ int main(int argc, char* argv[], char* envp[]) {
 
   try {
     // ── Parsear configuración ───────────────────────────────────────
-    std::string configPath = "config/default.conf";
-    if (argc == 2)
-      configPath = argv[1];
+    std::string configPath = argv[1];
     ConfigParser parser;
     ConfigMap configMap = parser.parse(configPath);
 
@@ -57,8 +55,13 @@ int main(int argc, char* argv[], char* envp[]) {
     // IP del grupo (decisión #17) queda pendiente en su constructor.
     for (ConfigMap::const_iterator it = configMap.begin(); it != configMap.end(); ++it) {
       ServerHandler* server = new ServerHandler(it->second.ip, it->second.port, it->second.servers[0], epoll, router);
-      server->setup();
-      epoll.addHandler(server, EPOLLIN);
+      try {
+        server->setup();
+        epoll.addHandler(server, EPOLLIN);
+      } catch (...) {
+        delete server;
+        throw;
+      }
     }
 
     // ── Arrancar event-loop ─────────────────────────────────────────

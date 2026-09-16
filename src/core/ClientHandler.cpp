@@ -182,6 +182,10 @@ bool ClientHandler::isTimedOut(time_t current_time) const {
   return (current_time - lastActivityTime_) > CLIENT_TIMEOUT_SECS;
 }
 
+void ClientHandler::updateActivity() {
+  lastActivityTime_ = std::time(NULL);
+}
+
 // ─── Gestión de CGI ─────────────────────────────────────────────────────────
 void ClientHandler::registerCgi(pid_t pid, CgiReadHandler* read_h, CgiWriteHandler* write_h) {
   cgiPid_ = pid;
