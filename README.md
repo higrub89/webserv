@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by rhiguita.*
+*This project has been created as part of the 42 curriculum by rhiguita, migugar2, almejia-*
 
 # Webserv — Non-Blocking HTTP/1.1 Web Server in C++98
 
