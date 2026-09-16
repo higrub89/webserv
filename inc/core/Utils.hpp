@@ -104,6 +104,13 @@ std::string normalizeUriPath(const std::string& path);
 std::string resolvePath(const std::string& uri, const std::string& route_path, const std::string& root_dir);
 
 /**
+ * @brief Escapes HTML special characters (&, <, >, ", ') to prevent XSS.
+ * @param str The raw input string.
+ * @return HTML-escaped string.
+ */
+std::string htmlEscape(const std::string& str);
+
+/**
  * @brief Converts any streamable value to std::string (C++98 alternative to std::to_string).
  * @param val The value to convert.
  * @return The string representation of val.

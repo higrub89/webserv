@@ -85,7 +85,8 @@ void GetExecutor::generateAutoindex(const std::string& dirPath, const std::strin
     return;
   }
 
-  std::string body = "<html><body><h1>Index of " + uriPath + "</h1><ul>";
+  std::string escapedUri = Utils::htmlEscape(uriPath);
+  std::string body = "<html><body><h1>Index of " + escapedUri + "</h1><ul>";
   struct dirent* entry;
   while ((entry = readdir(dir)) != NULL) {
     std::string name = entry->d_name;
@@ -97,7 +98,9 @@ void GetExecutor::generateAutoindex(const std::string& dirPath, const std::strin
       href += "/";
     }
     href += name;
-    body += "<li><a href=\"" + href + "\">" + name + "</a></li>";
+    std::string escapedHref = Utils::htmlEscape(href);
+    std::string escapedName = Utils::htmlEscape(name);
+    body += "<li><a href=\"" + escapedHref + "\">" + escapedName + "</a></li>";
   }
   closedir(dir);
   body += "</ul></body></html>";
