@@ -31,15 +31,17 @@ void Router::processSession(const HttpRequest& req, HttpResponse& res, ClientHan
     sessionId = it->second;
   }
 
+  std::string resourceInfo = req.getMethod() + " " + req.getPath();
+
   SessionData session;
   if (!sessionId.empty() && sessionManager_.getSession(sessionId, session)) {
-    Logger::info("Session active [" + sessionId + "] | Client: " + session.clientIp +
+    Logger::info(resourceInfo + " | Session active [" + sessionId + "] | Client: " + session.clientIp +
                  " | Visits: " + Utils::toString(session.visitCount) +
                  " | Active sessions: " + Utils::toString(sessionManager_.getActiveSessionCount()));
   } else {
     std::string newId = sessionManager_.createSession(clientIp);
     res.setCookie("session_id", newId, "/", 1800, true);
-    Logger::info("New session created [" + newId + "] | Client: " + clientIp +
+    Logger::info(resourceInfo + " | New session created [" + newId + "] | Client: " + clientIp +
                  " | Visit #1 | Active sessions: " + Utils::toString(sessionManager_.getActiveSessionCount()));
   }
 }
