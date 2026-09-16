@@ -4,7 +4,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <cerrno>
 #include <cstring>
 #include <iostream>
 
@@ -69,8 +68,7 @@ void ClientHandler::onReadReady() {
   } else if (n == 0) {
     onDisconnect();
   } else {
-    if (errno != EAGAIN && errno != EWOULDBLOCK)
-      onDisconnect();
+    onDisconnect();
   }
 }
 
@@ -94,9 +92,10 @@ void ClientHandler::onWriteReady() {
       else
         onDisconnect();
     }
-  } else if (n < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK)
-      onDisconnect();
+  } else if (n == 0) {
+    onDisconnect();
+  } else {
+    onDisconnect();
   }
 }
 

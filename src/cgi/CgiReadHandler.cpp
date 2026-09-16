@@ -3,7 +3,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#include <cerrno>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -118,10 +117,8 @@ void CgiReadHandler::onReadReady() {
       return;
     }
   } else {  // bytes_read < 0: read error occurred.
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
-      client_.handleCgiError();
-      return;
-    }
+    client_.handleCgiError();
+    return;
   }
 }
 
