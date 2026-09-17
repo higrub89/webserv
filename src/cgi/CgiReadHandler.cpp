@@ -3,13 +3,12 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "Utils.hpp"
-#include <cerrno>
-#include <iostream>
 
 CgiReadHandler::CgiReadHandler(int stdout_fd, EpollManager& epoll_manager, ClientHandler& client, pid_t cgi_pid) : AEventHandler(stdout_fd), epollManager_(epoll_manager), client_(client), cgiPid_(cgi_pid), headersParsed_(false) {
   readBuffer_.reserve(kMaxHeadersSize);
@@ -38,6 +37,7 @@ void CgiReadHandler::onReadReady() {
 
   if (bytes_read > 0) {
     readBuffer_.insert(readBuffer_.end(), buffer, buffer + bytes_read);
+    client_.updateActivity();
   } else if (bytes_read == 0) {  // CGI finished
     int status;
     pid_t reaped = waitpid(cgiPid_, &status, WNOHANG);
@@ -117,10 +117,8 @@ void CgiReadHandler::onReadReady() {
       return;
     }
   } else {  // bytes_read < 0: read error occurred.
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
-      client_.handleCgiError();
-      return;
-    }
+    client_.handleCgiError();
+    return;
   }
 }
 

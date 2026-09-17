@@ -33,7 +33,7 @@ bool startsWithStatus(const std::string& line) {
     return false;
   std::string prefix = line.substr(0, 7);
   for (size_t i = 0; i < 7; ++i) {
-    prefix[i] = std::tolower(prefix[i]);
+    prefix[i] = std::tolower(static_cast<unsigned char>(prefix[i]));
   }
   return prefix == "status:";
 }
@@ -41,7 +41,7 @@ bool startsWithStatus(const std::string& line) {
 std::string toHeaderEnvKey(const std::string& key) {
   std::string formatted = key;
   for (size_t i = 0; i < formatted.length(); ++i) {
-    formatted[i] = std::toupper(formatted[i]);
+    formatted[i] = std::toupper(static_cast<unsigned char>(formatted[i]));
     if (formatted[i] == '-') {
       formatted[i] = '_';
     }
@@ -163,6 +163,28 @@ std::string resolvePath(const std::string& uri, const std::string& route_path, c
     relPath = "/" + relPath;
   }
   return root + relPath;
+}
+
+std::string htmlEscape(const std::string& str) {
+  std::string out;
+  out.reserve(str.size());
+  for (size_t i = 0; i < str.size(); ++i) {
+    char c = str[i];
+    if (c == '&') {
+      out += "&amp;";
+    } else if (c == '<') {
+      out += "&lt;";
+    } else if (c == '>') {
+      out += "&gt;";
+    } else if (c == '"') {
+      out += "&quot;";
+    } else if (c == '\'') {
+      out += "&#39;";
+    } else {
+      out += c;
+    }
+  }
+  return out;
 }
 
 }  // namespace Utils

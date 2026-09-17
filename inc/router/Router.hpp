@@ -8,6 +8,7 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "IMethodExecutor.hpp"
+#include "SessionManager.hpp"
 #include "types/ConfigStructures.hpp"
 
 /**
@@ -23,6 +24,9 @@ private:
   const ConfigMap& globalConfig_;
   std::map<std::string, IMethodExecutor*> methodRegistry_;
   char** envp_;
+  SessionManager sessionManager_;
+
+  void processSession(const HttpRequest& req, HttpResponse& res, ClientHandler* client);
 
   /**
    * @brief Resolves the matching ServerConfig based on the Host header string and listening port.

@@ -352,17 +352,30 @@ bool HttpParser::handleChunkData(std::vector<char>& raw_buffer, HttpRequest& req
 }
 
 bool HttpParser::handleChunkCRLF(std::vector<char>& raw_buffer, HttpRequest& req) {
-  if (raw_buffer.size() < 2) {
+  if (raw_buffer.empty()) {
     return false;
   }
 
-  if (raw_buffer[0] != '\r' || raw_buffer[1] != '\n') {
+  size_t bytesToConsume = 0;
+  if (raw_buffer[0] == '\r') {
+    if (raw_buffer.size() < 2) {
+      return false;
+    }
+    if (raw_buffer[1] != '\n') {
+      state_ = STATE_ERROR;
+      errorCode_ = 400;
+      return false;
+    }
+    bytesToConsume = 2;
+  } else if (raw_buffer[0] == '\n') {
+    bytesToConsume = 1;
+  } else {
     state_ = STATE_ERROR;
     errorCode_ = 400;
     return false;
   }
 
-  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + 2);
+  raw_buffer.erase(raw_buffer.begin(), raw_buffer.begin() + bytesToConsume);
 
   if (chunkSizeAccumulator_ == 0) {
     state_ = STATE_COMPLETE;

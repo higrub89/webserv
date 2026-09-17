@@ -77,6 +77,7 @@ public:
   void changeState(ClientState new_state);
   ClientState getState() const;
   bool isTimedOut(time_t current_time) const;
+  void updateActivity();
 
   EpollManager& getEpollManager() const;
   Router& getRouter() const;

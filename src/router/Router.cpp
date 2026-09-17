@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "HttpError.hpp"
+#include "Logger.hpp"
 #include "Utils.hpp"
 
 Router::Router(const ConfigMap& config, char** envp) : globalConfig_(config), envp_(envp) {
@@ -15,6 +16,34 @@ Router::~Router() {
 
 void Router::registerMethodExecutor(const std::string& method, IMethodExecutor* executor) {
   methodRegistry_[method] = executor;
+}
+
+void Router::processSession(const HttpRequest& req, HttpResponse& res, ClientHandler* client) {
+  std::string clientIp = "unknown";
+  if (client != NULL) {
+    clientIp = client->getClientIp();
+  }
+
+  std::string sessionId = "";
+  const std::map<std::string, std::string>& cookies = req.getCookies();
+  std::map<std::string, std::string>::const_iterator it = cookies.find("session_id");
+  if (it != cookies.end()) {
+    sessionId = it->second;
+  }
+
+  std::string resourceInfo = req.getMethod() + " " + req.getPath();
+
+  SessionData session;
+  if (!sessionId.empty() && sessionManager_.getSession(sessionId, session)) {
+    Logger::info(resourceInfo + " | Session active [" + sessionId + "] | Client: " + session.clientIp +
+                 " | Visits: " + Utils::toString(session.visitCount) +
+                 " | Active sessions: " + Utils::toString(sessionManager_.getActiveSessionCount()));
+  } else {
+    std::string newId = sessionManager_.createSession(clientIp);
+    res.setCookie("session_id", newId, "/", 1800, true);
+    Logger::info(resourceInfo + " | New session created [" + newId + "] | Client: " + clientIp +
+                 " | Visit #1 | Active sessions: " + Utils::toString(sessionManager_.getActiveSessionCount()));
+  }
 }
 
 void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* client, int server_port) {
@@ -30,6 +59,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
   const LocationConfig* location = resolveLocation(normalizedPath, server);
   if (location == NULL) {
     HttpError::populate(res, 404, server);
+    processSession(req, res, client);
     if (client) {
       client->changeState(ClientHandler::WRITING_RESPONSE);
     }
@@ -43,6 +73,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
 
   if (effectiveLimit > 0 && req.getBody().size() > effectiveLimit) {
     HttpError::populate(res, 413, server);
+    processSession(req, res, client);
     if (client) {
       client->changeState(ClientHandler::WRITING_RESPONSE);
     }
@@ -56,6 +87,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     res.setHeader("Location", location->return_redirect);
     res.setHeader("Connection", "close");
     res.setBody("");
+    processSession(req, res, client);
     if (client) {
       client->changeState(ClientHandler::WRITING_RESPONSE);
     }
@@ -74,6 +106,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
           if (res.getStatusCode() >= 400 && res.getBody().empty()) {
             HttpError::populate(res, res.getStatusCode(), server);
           }
+          processSession(req, res, client);
           if (client) {
             client->changeState(ClientHandler::WRITING_RESPONSE);
           }
@@ -88,6 +121,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     if (std::find(location->allowed_methods.begin(), location->allowed_methods.end(), req.getMethod()) == location->allowed_methods.end()) {
       HttpError::populate(res, 405, server);
       res.setHeader("Allow", Utils::join(location->allowed_methods, ", "));
+      processSession(req, res, client);
       if (client) {
         client->changeState(ClientHandler::WRITING_RESPONSE);
       }
@@ -98,6 +132,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
   std::map<std::string, IMethodExecutor*>::iterator methodIt = methodRegistry_.find(req.getMethod());
   if (methodIt == methodRegistry_.end()) {
     HttpError::populate(res, 501, server);
+    processSession(req, res, client);
     if (client) {
       client->changeState(ClientHandler::WRITING_RESPONSE);
     }
@@ -109,6 +144,7 @@ void Router::dispatch(const HttpRequest& req, HttpResponse& res, ClientHandler* 
     if (res.getStatusCode() >= 400 && res.getBody().empty()) {
       HttpError::populate(res, res.getStatusCode(), server);
     }
+    processSession(req, res, client);
     if (client) {
       client->changeState(ClientHandler::WRITING_RESPONSE);
     }

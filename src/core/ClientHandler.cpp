@@ -4,7 +4,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <cerrno>
 #include <cstring>
 #include <iostream>
 
@@ -69,8 +68,7 @@ void ClientHandler::onReadReady() {
   } else if (n == 0) {
     onDisconnect();
   } else {
-    if (errno != EAGAIN && errno != EWOULDBLOCK)
-      onDisconnect();
+    onDisconnect();
   }
 }
 
@@ -94,9 +92,10 @@ void ClientHandler::onWriteReady() {
       else
         onDisconnect();
     }
-  } else if (n < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK)
-      onDisconnect();
+  } else if (n == 0) {
+    onDisconnect();
+  } else {
+    onDisconnect();
   }
 }
 
@@ -180,6 +179,10 @@ void ClientHandler::changeState(ClientState new_state) {
 
 bool ClientHandler::isTimedOut(time_t current_time) const {
   return (current_time - lastActivityTime_) > CLIENT_TIMEOUT_SECS;
+}
+
+void ClientHandler::updateActivity() {
+  lastActivityTime_ = std::time(NULL);
 }
 
 // ─── Gestión de CGI ─────────────────────────────────────────────────────────

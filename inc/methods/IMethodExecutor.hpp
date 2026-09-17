@@ -14,8 +14,8 @@ struct LocationConfig;
  */
 class IMethodExecutor {
 public:
-  IMethodExecutor() {}
-  virtual ~IMethodExecutor() {}
+  IMethodExecutor();
+  virtual ~IMethodExecutor();
 
   /**
    * @brief Executes the HTTP method logic for the given request and location.
