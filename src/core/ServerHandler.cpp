@@ -17,8 +17,8 @@
 
 // ─── Constructor / Destructor ───────────────────────────────────────────────
 
-ServerHandler::ServerHandler(const std::string& ip, int port, const ServerConfig& config, EpollManager& epoll_manager, Router& router)
-  : AEventHandler(-1), config_(config), epollManager_(epoll_manager), router_(router), ip_(ip), port_(port) {
+ServerHandler::ServerHandler(const std::string& ip, int port, const ServerConfig& /* config */, EpollManager& epoll_manager, Router& router)
+  : AEventHandler(-1), epollManager_(epoll_manager), router_(router), ip_(ip), port_(port) {
   std::memset(&address_, 0, sizeof(address_));
 }
 

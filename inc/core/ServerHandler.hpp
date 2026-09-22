@@ -18,7 +18,6 @@ class Router;
  */
 class ServerHandler : public AEventHandler {
 private:
-  const ServerConfig& config_;
   EpollManager& epollManager_;
   Router& router_;
   struct sockaddr_in address_;

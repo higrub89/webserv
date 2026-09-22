@@ -23,7 +23,6 @@ class Router {
 private:
   const ConfigMap& globalConfig_;
   std::map<std::string, IMethodExecutor*> methodRegistry_;
-  char** envp_;
   SessionManager sessionManager_;
 
   void processSession(const HttpRequest& req, HttpResponse& res, ClientHandler* client);

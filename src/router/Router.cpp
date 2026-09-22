@@ -6,7 +6,7 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 
-Router::Router(const ConfigMap& config, char** envp) : globalConfig_(config), envp_(envp) {
+Router::Router(const ConfigMap& config, char** /* envp */) : globalConfig_(config) {
 }
 
 Router::~Router() {
