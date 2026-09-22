@@ -1,0 +1,124 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-verify:
+    name: Build & Sanity Check (${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang valgrind curl python3
+
+      - name: Check compilation with ${{ matrix.compiler }}
+        run: |
+          make clean
+          make all CXX=${{ matrix.compiler }}
+
+      - name: Verify Makefile rules (clean, fclean, re)
+        run: |
+          make clean
+          [ ! -d "obj" ] || exit 1
+          make all CXX=${{ matrix.compiler }}
+          make fclean
+          [ ! -f "webserv" ] || exit 1
+          make re CXX=${{ matrix.compiler }}
+
+      - name: Check Debug build with Address & Leak Sanitizers
+        run: |
+          make debug CXX=${{ matrix.compiler }}
+
+  integration-tests:
+    name: Integration & Valgrind Leak Verification
+    runs-on: ubuntu-latest
+    needs: build-and-verify
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential valgrind curl python3
+
+      - name: Build release binary
+        run: make all
+
+      - name: Run HTTP Functional Smoke Tests
+        run: |
+          ./webserv config/default.conf &
+          SERVER_PID=$!
+          sleep 2
+
+          echo "=== Test 1: GET / ==="
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Expected 200, got $HTTP_CODE"
+            kill -SIGINT $SERVER_PID
+            exit 1
+          fi
+
+          echo "=== Test 2: GET non-existent page (404) ==="
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/nonexistent_ci_test)
+          if [ "$HTTP_CODE" != "404" ]; then
+            echo "Expected 404, got $HTTP_CODE"
+            kill -SIGINT $SERVER_PID
+            exit 1
+          fi
+
+          echo "=== Test 3: POST file upload ==="
+          UPLOAD_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8080/upload/ci_sample.txt -d "Webserv CI Test Payload")
+          if [ "$UPLOAD_CODE" != "200" ] && [ "$UPLOAD_CODE" != "201" ]; then
+            echo "Upload failed with code $UPLOAD_CODE"
+            kill -SIGINT $SERVER_PID
+            exit 1
+          fi
+
+          echo "=== Test 4: GET uploaded file ==="
+          CONTENT=$(curl -s http://localhost:8080/upload/ci_sample.txt)
+          if [ "$CONTENT" != "Webserv CI Test Payload" ]; then
+            echo "Content mismatch: $CONTENT"
+            kill -SIGINT $SERVER_PID
+            exit 1
+          fi
+
+          echo "=== Test 5: DELETE uploaded file ==="
+          DEL_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE http://localhost:8080/upload/ci_sample.txt)
+          if [ "$DEL_CODE" != "200" ] && [ "$DEL_CODE" != "204" ]; then
+            echo "Delete failed with code $DEL_CODE"
+            kill -SIGINT $SERVER_PID
+            exit 1
+          fi
+
+          kill -SIGINT $SERVER_PID
+          wait $SERVER_PID || true
+          echo "All HTTP smoke tests passed successfully!"
+
+      - name: Automated Valgrind Memory Leak Verification
+        run: |
+          valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --error-exitcode=42 ./webserv config/default.conf &
+          VALGRIND_PID=$!
+          sleep 2
+
+          curl -s http://localhost:8080/ > /dev/null
+          curl -s http://localhost:8080/nonexistent > /dev/null
+
+          kill -SIGINT $VALGRIND_PID
+          wait $VALGRIND_PID
+          echo "Valgrind reported 0 leaks and 0 errors!"

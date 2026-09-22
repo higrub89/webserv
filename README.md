@@ -2,9 +2,44 @@
 
 # Webserv — Non-Blocking HTTP/1.1 Web Server in C++98
 
+[![CI Pipeline](https://github.com/higrub89/webserv/actions/workflows/ci.yml/badge.svg)](https://github.com/higrub89/webserv/actions/workflows/ci.yml)
+[![Standard](https://img.shields.io/badge/C%2B%2B-98-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B98)
+[![POSIX](https://img.shields.io/badge/Standard-POSIX.1--2017-orange.svg)](https://pubs.opengroup.org/onlinepubs/9699919799/)
+[![Memory](https://img.shields.io/badge/Valgrind-0%20leaks%20%7C%200%20errors-brightgreen.svg)](https://valgrind.org/)
+[![42 Grade](https://img.shields.io/badge/42_Madrid-125%2F100_Bonus-purple.svg)](https://www.42madrid.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ## Description
 
 **Webserv** is an asynchronous, event-driven HTTP/1.1 web server implemented in C++98. Inspired by NGINX, it provides a high-performance network service handling multiple concurrent connections using a single-threaded Linux `epoll` event loop without blocking I/O calls.
+
+```mermaid
+flowchart TD
+    subgraph Network["Network & Kernel Layer"]
+        A["Listening Sockets"] -->|accept| E["EpollManager (epoll_wait)"]
+        C["Client Connections"] <-->|non-blocking read / write| E
+        P["CGI Pipes"] <-->|non-blocking IPC| E
+    end
+
+    subgraph Core["Event Dispatcher"]
+        E -->|New Connection| SH["ServerHandler"]
+        E -->|Client Event| CH["ClientHandler"]
+        E -->|Pipe Event| CGI_H["CgiReadHandler / CgiWriteHandler"]
+    end
+
+    subgraph Pipeline["HTTP Processing Pipeline"]
+        CH --> HP["HttpParser (FSM Parser)"]
+        HP --> R["Router & Virtual Host Matching"]
+        R -->|Static GET| GE["GetExecutor"]
+        R -->|Upload / POST| PE["PostExecutor"]
+        R -->|File DELETE| DE["DeleteExecutor"]
+        R -->|CGI Gateway| CE["CgiExecutor (fork & execve)"]
+    end
+
+    subgraph State["State & Sessions"]
+        R <--> SM["SessionManager (In-Memory Cookies)"]
+    end
+```
 
 ### Core Architecture & Features
 
