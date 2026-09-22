@@ -262,4 +262,9 @@ compile_flags.txt
 compile_commands.json
 .clangd/
 
+# Upload directory files
+www/uploads/*
+!www/uploads/.gitkeep
+
 # End of https://www.toptal.com/developers/gitignore/api/c,c++,linux,python
+
